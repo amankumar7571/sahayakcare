@@ -111,8 +111,10 @@ check('syncAfterSignIn pushes local data when pull finds nothing', /if \(!pulled
 // 10. QA fixes (M1/M2/M4/M5) + quick P1s
 // M1: getAdherence skips days before a medicine was created (same guard as getStreak)
 check('getAdherence has the createdAt guard', /function getAdherence\(\)[\s\S]*?m\.createdAt && m\.createdAt > d/.test(script));
-// M2: sample profile asks for confirmation first
-check('sample profile confirms before replacing the local profile', /confirm\('Load the sample profile\?/.test(script));
+// M2: the sample modal itself warns that loading replaces the profile
+//      (round 7: the native confirm() guard is gone — it auto-dismissed
+//      as Cancel in automated browsers and killed the button entirely)
+check('sample modal hint warns loading replaces the profile on this device', /sample_pass_hint: "Choose your own 4-digit passcode[^"]*Loading it replaces the profile on this device\."/.test(script));
 // M4: share import signs out first so it never overwrites the cloud backup
 check('load() signs out before applying shared state', /function load\(\)[\s\S]*?api\.token = ''[\s\S]*?state = \{/.test(script));
 // M5: share import merges over the default shape (partial links cannot crash the app)
@@ -174,7 +176,7 @@ check('setup sample button sits inside the setup screen', /id="setupScreen"[\s\S
 check('shared loadSampleProfile function exists', /function loadSampleProfile\(\)/.test(script));
 check('lock-screen sample button uses the shared function', /\$\('sampleProfileBtn'\)\.onclick = loadSampleProfile/.test(script));
 check('setup-screen sample button uses the shared function', /\$\('setupSampleBtn'\)\.onclick = loadSampleProfile/.test(script));
-check('sample confirm still guards the shared path', /function loadSampleProfile\(\)[\s\S]*?confirm\('Load the sample profile\?/.test(script));
+check('sample load opens the modal directly (no native confirm guard)', /function loadSampleProfile\(\) \{\s*openSamplePassModal\(\);\s*\}/.test(script));
 check('sampleData still called from exactly one place', (script.match(/sampleData\(/g) || []).length === 2);
 // 12b. Dismissed reminders survive a reload (separate key, date-scoped,
 //      never synced to the cloud)
@@ -257,7 +259,7 @@ check('sample passcode modal exists', htmlIds.has('samplePassModal'));
 for (const id of ['samplePass', 'samplePassConfirm', 'samplePassError', 'samplePassSave', 'samplePassCancel']) {
   check(`sample passcode modal field #${id} exists`, htmlIds.has(id));
 }
-check('sample load still confirms before replacing the profile', /function loadSampleProfile\(\)[\s\S]*?confirm\('Load the sample profile\?/.test(script));
+check('sample load is exactly open-the-modal (no guard of any kind)', /function loadSampleProfile\(\) \{\s*openSamplePassModal\(\);\s*\}/.test(script));
 check('sample load opens the passcode modal after the confirm', /function loadSampleProfile\(\)[\s\S]*?openSamplePassModal\(\)/.test(script));
 const sampleSaveFn = (script.match(/\$\('samplePassSave'\)\.onclick = \(\) => \{[\s\S]*?\n\};/) || [])[0] || '';
 check('sample modal validates the passcode is exactly 4 digits', /\/\^\\d\{4\}\$\//.test(sampleSaveFn));
@@ -268,10 +270,24 @@ check('sample modal signs out first (sample never overwrites the cloud backup)',
 check('sample modal opens the dashboard directly after setting the passcode', /setUnlockedSession\(\)[\s\S]*?openApp\(\)/.test(sampleSaveFn));
 check('sample passcode modal is in the backdrop-click close list', /\[medModal, apptModal, memberModal, authModal, passModal, shareModal, samplePassModal\]/.test(script));
 check('sample passcode modal is in the Escape close list', /'samplePassModal'/.test(script));
-check('sample modal i18n: hint in English', /sample_pass_hint: "Choose your own 4-digit passcode to open this sample profile\. Nothing is preset — you pick it\."/.test(script));
-check('sample modal i18n: hint in Hindi', /sample_pass_hint: "इस नमूना प्रोफ़ाइल को खोलने के लिए अपना 4 अंकों का पासकोड चुनें। कुछ भी पहले से तय नहीं है — आप खुद चुनें।"/.test(script));
+check('sample modal i18n: hint in English', /sample_pass_hint: "Choose your own 4-digit passcode to open this sample profile\. Nothing is preset — you pick it\. Loading it replaces the profile on this device\."/.test(script));
+check('sample modal i18n: hint in Hindi', /sample_pass_hint: "इस नमूना प्रोफ़ाइल को खोलने के लिए अपना 4 अंकों का पासकोड चुनें। कुछ भी पहले से तय नहीं है — आप खुद चुनें। इसे खोलने पर इस डिवाइस की प्रोफ़ाइल बदल जाएगी।"/.test(script));
 check('sample modal i18n: open button in English', /sample_pass_open: "Open sample profile"/.test(script));
 check('sample modal i18n: open button in Hindi', /sample_pass_open: "नमूना प्रोफ़ाइल खोलें"/.test(script));
+
+// 16. Round 7: the round-6 sample button was DEAD in a real browser —
+//     loadSampleProfile() called native confirm() first, and automated
+//     browsers auto-dismiss confirm() as Cancel, so the modal never
+//     opened. The guard is gone; the modal's Cancel button is the
+//     back-out, and the hint carries the replacement warning.
+const sampleFn = (script.match(/function loadSampleProfile\(\) \{[\s\S]*?\n\}/) || [])[0] || '';
+const sampleModalFn = (script.match(/function openSamplePassModal\(\) \{[\s\S]*?\n\}/) || [])[0] || '';
+check('loadSampleProfile body has no native confirm/prompt/alert', !/confirm\(|prompt\(|alert\(/.test(sampleFn));
+check('openSamplePassModal body has no native confirm/prompt/alert', !/confirm\(|prompt\(|alert\(/.test(sampleModalFn));
+check('whole sample path uses no native dialogs (load + modal + save)', !/confirm\(|prompt\(|alert\(/.test(sampleFn + sampleModalFn + sampleSaveFn));
+check('no "Load the sample profile?" native confirm string remains', !/Load the sample profile\?/.test(script));
+check('sample modal Cancel still closes the modal without loading', /\$\('samplePassCancel'\)\.onclick = \(\) => \$\('samplePassModal'\)\.style\.display = 'none'/.test(script));
+check('sample modal hint still warns about replacement in the HTML text', /Loading it replaces the profile on this device/.test(html));
 
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);

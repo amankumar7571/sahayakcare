@@ -463,7 +463,7 @@
 <div id="samplePassModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="card p-6 w-full max-w-md">
         <h3 class="text-xl font-bold mb-2">🔑 Set a passcode for the sample profile</h3>
-        <p class="text-sm text-slate-600 mb-4" data-i18n="sample_pass_hint">Choose your own 4-digit passcode to open this sample profile. Nothing is preset — you pick it.</p>
+        <p class="text-sm text-slate-600 mb-4" data-i18n="sample_pass_hint">Choose your own 4-digit passcode to open this sample profile. Nothing is preset — you pick it. Loading it replaces the profile on this device.</p>
         <div class="space-y-4">
             <div>
                 <label for="samplePass" class="block text-sm font-medium text-slate-700" data-i18n="sample_pass">Set a 4-digit passcode</label>
@@ -639,7 +639,7 @@ const I18N = {
         setup_sample: "Explore a sample profile",
         footer_advice: "SahayakCare does not replace medical advice.",
         sample_banner: "You're exploring a sample profile with fictional data.",
-        sample_pass_hint: "Choose your own 4-digit passcode to open this sample profile. Nothing is preset — you pick it.",
+        sample_pass_hint: "Choose your own 4-digit passcode to open this sample profile. Nothing is preset — you pick it. Loading it replaces the profile on this device.",
         sample_pass: "Set a 4-digit passcode",
         sample_pass_confirm: "Confirm passcode",
         sample_pass_open: "Open sample profile",
@@ -675,7 +675,7 @@ const I18N = {
         setup_sample: "नमूना प्रोफ़ाइल देखें",
         footer_advice: "SahayakCare चिकित्सा सलाह का विकल्प नहीं है।",
         sample_banner: "आप नमूना प्रोफ़ाइल देख रहे हैं — यह डेटा काल्पनिक है।",
-        sample_pass_hint: "इस नमूना प्रोफ़ाइल को खोलने के लिए अपना 4 अंकों का पासकोड चुनें। कुछ भी पहले से तय नहीं है — आप खुद चुनें।",
+        sample_pass_hint: "इस नमूना प्रोफ़ाइल को खोलने के लिए अपना 4 अंकों का पासकोड चुनें। कुछ भी पहले से तय नहीं है — आप खुद चुनें। इसे खोलने पर इस डिवाइस की प्रोफ़ाइल बदल जाएगी।",
         sample_pass: "4 अंकों का पासकोड सेट करें",
         sample_pass_confirm: "पासकोड दोबारा डालें",
         sample_pass_open: "नमूना प्रोफ़ाइल खोलें",
@@ -1434,16 +1434,20 @@ function refreshLockAuthUI() {
 $('lockAuthBtn').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
 $('lockSignOutBtn').onclick = () => { api.token = ''; clearUnlockedSession(); refreshAuthUI(); };
 // One shared path for both sample entry points (lock screen +
-// setup screen). One tap must not silently wipe a real local profile:
-// confirm first. (The token is still cleared below so fictional data
-// never overwrites the signed-in user's real cloud profile.)
-// The sample has NO preset passcode: after the confirm, an in-app
-// modal asks the user to set their own 4-digit passcode and the
-// sample opens with THAT passcode. A native prompt dialog must never be
-// used here — automated browsers auto-accept it with an unseen
-// value, which is exactly how the old passcode lockout happened.
+// setup screen). There is NO native confirm() guard here on purpose:
+// automated browsers auto-dismiss native confirm() as Cancel, so the
+// guard silently killed the button entirely (round-7 regression — the
+// modal never opened). The back-out is the modal's own Cancel button,
+// and the modal hint warns that loading the sample replaces the
+// profile on this device. (The token is still cleared in the save
+// handler so fictional data never overwrites the signed-in user's
+// real cloud profile.)
+// The sample has NO preset passcode: an in-app modal asks the user to
+// set their own 4-digit passcode and the sample opens with THAT
+// passcode. A native prompt dialog must never be used here —
+// automated browsers auto-accept it with an unseen value, which is
+// exactly how the old passcode lockout happened.
 function loadSampleProfile() {
-    if (!confirm('Load the sample profile? This replaces the profile on this device.')) return;
     openSamplePassModal();
 }
 function openSamplePassModal() {
