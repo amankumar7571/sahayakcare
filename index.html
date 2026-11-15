@@ -1635,6 +1635,24 @@ $('authSignIn').onclick = async () => {
     $('authModal').style.display = 'none';
     renderAll();
 };
+// Create-account starts FRESH. A brand-new cloud account must open with
+// an empty profile — never with whatever local profile was already on
+// this device. Discard the local profile, clear the session flag and
+// dismissed reminders, keep the new account's token, and land on the
+// setup screen so the new account gets its own name + passcode. No
+// confirm: create-account just opens fresh. (Sign-in keeps its own
+// path — pull the cloud state, push local only if the server has
+// nothing — see syncAfterSignIn.) The fresh profile syncs to the new
+// account when setup completes: setupSubmit calls save(), which
+// syncPushes while signed in.
+function resetLocalForNewAccount() {
+    localStorage.removeItem('sahayakcare_v1');
+    localStorage.removeItem(DISMISSED_KEY);
+    dismissedReminders.clear();
+    clearUnlockedSession();
+    state = { profileName: '', profileAge: null, medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: '', sample: false };
+    localStorage.setItem('sahayakcare_v1', JSON.stringify(state));
+}
 $('authSignUp').onclick = async () => {
     const name = $('authName').value.trim();
     const email = $('authEmail').value.trim();
@@ -1654,7 +1672,8 @@ $('authSignUp').onclick = async () => {
     const login = await signInWithRetry(email, password);
     if (login && login.status === 200 && login.data.access_token) {
         api.token = login.data.access_token;
-        await api.syncPush(); // first save: upload the local data to the new account
+        resetLocalForNewAccount(); // new account = fresh profile, never the old local data
+        showBootScreen(); // land on setup even if the app was open (unlocked) before — the tail's "only if app hidden" guard would skip it
     }
     refreshAuthUI();
     if ($('app').style.display !== 'block') showBootScreen();

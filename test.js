@@ -226,5 +226,25 @@ check('sample load clears the session flag', /function loadSampleProfile\(\)[\s\
 check('resetDemo clears the session flag', /function resetDemo[\s\S]*?clearUnlockedSession\(\)/.test(script));
 check('sign-in returns to the boot screen (passcode still required)', /\$\('authSignIn'\)\.onclick = async \(\) => \{[\s\S]*?showBootScreen\(\)/.test(script));
 
+// 14. Round 5: create-account starts FRESH — a new cloud account must
+//     never inherit the local profile already on the device. Sign-in
+//     keeps its pull-first / push-if-nothing path (round 1 rule).
+const signUpFn = (script.match(/\$\('authSignUp'\)\.onclick = async \(\) => \{[\s\S]*?\n\};/) || [])[0] || '';
+const resetFn = (script.match(/function resetLocalForNewAccount\(\) \{[\s\S]*?\n\}/) || [])[0] || '';
+check('resetLocalForNewAccount helper exists', /function resetLocalForNewAccount\(\) \{/.test(script));
+check('reset helper discards the local profile (empty default shape)', /function resetLocalForNewAccount\(\) \{[\s\S]*?state = \{ profileName: '', profileAge: null, medicines: \[\], appointments: \[\], circle: \[\], vitals: \[\], doseLog: \{\}, passcode: '', sample: false \}/.test(script));
+check('reset helper removes the saved profile from localStorage', /function resetLocalForNewAccount\(\) \{[\s\S]*?localStorage\.removeItem\('sahayakcare_v1'\)/.test(script));
+check('reset helper clears persisted dismissals', /function resetLocalForNewAccount\(\) \{[\s\S]*?localStorage\.removeItem\(DISMISSED_KEY\)[\s\S]*?dismissedReminders\.clear\(\)/.test(script));
+check('reset helper clears the session unlock flag', /function resetLocalForNewAccount\(\) \{[\s\S]*?clearUnlockedSession\(\)/.test(script));
+check('reset helper asks for no confirmation (create-account just opens fresh)', !/confirm\(/.test(resetFn));
+check('sign-up calls resetLocalForNewAccount after login', /resetLocalForNewAccount\(\);/.test(signUpFn));
+check('sign-up no longer pushes the old local data to the new account', !/syncPush/.test(signUpFn));
+check('sign-up does not reuse the sign-in sync path', !/syncAfterSignIn/.test(signUpFn));
+check('sign-up reset happens only after a successful login (token set)', /api\.token = login\.data\.access_token;[\s\S]*?resetLocalForNewAccount\(\);/.test(signUpFn));
+check('sign-up shows the setup screen right after the reset (even if the app was open)', /resetLocalForNewAccount\(\);[\s\S]*?showBootScreen\(\);/.test(signUpFn));
+check('setupSubmit still saves (fresh profile syncs to the new account)', /\$\('setupSubmit'\)\.onclick = \(\) => \{[\s\S]*?clearUnlockedSession\(\);\s*save\(\);/.test(script));
+check('sign-in still uses syncAfterSignIn (unchanged)', /await syncAfterSignIn\(\)/.test(script));
+check('syncAfterSignIn still pushes local data when pull finds nothing', /if \(!pulled\) await api\.syncPush\(\)/.test(script));
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);
