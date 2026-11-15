@@ -6,20 +6,32 @@
     <title>SahayakCare — Elderly Care & Medication Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root { --primary:#0F766E; --text-light:#64748b; --danger:#DC2626; }
+        html.large-text { font-size: 125%; }
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; }
-        body.large-text { font-size: 118%; }
-        body.large-text button, body.large-text input, body.large-text select { font-size: 1.05rem; }
-        .card { background:#fff; border-radius:1rem; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-        .tabbtn { padding: 0.75rem 1rem; font-weight: 500; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .card { background:#fff; border-radius:1rem; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:1rem; }
+        .btn { display:inline-block; padding:.6rem 1rem; border-radius:.6rem; font-weight:600; font-size:1rem; min-height:44px; cursor:pointer; border:1px solid transparent; }
+        .btn-primary { background:var(--primary); color:#fff; }
+        .btn-secondary { background:#e2e8f0; color:#334155; }
+        .chip { display:inline-block; background:#ccfbf1; color:#0f766e; padding:.15rem .6rem; border-radius:9999px; font-size:.85rem; font-weight:600; }
+        .avatar { width:2.75rem; height:2.75rem; border-radius:9999px; background:#0d9488; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+        .dose-row { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.75rem 0; border-bottom:1px solid #f1f5f9; }
+        .dose-status { font-size:.8rem; font-weight:700; padding:.2rem .5rem; border-radius:.4rem; }
+        .dose-status.dose-taken { background:#d1fae5; color:#065f46; }
+        .dose-status.dose-missed { background:#fee2e2; color:#991b1b; }
+        .dose-status.dose-pending { background:#fef3c7; color:#92400e; }
+        .tabbtn { padding: 0.75rem 1rem; font-weight: 500; border-bottom: 3px solid transparent; transition: all 0.2s; min-height:44px; }
         .tabbtn.active { background:#0F766E; color:#fff; border-bottom-color: #D97706; }
         .modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:50; }
         .modal.hidden { display:none; }
-        input, select, textarea { border:1px solid #d1d5db; border-radius:.6rem; padding:.6rem .8rem; width:100%; }
+        .modal .card { max-height:90vh; overflow-y:auto; }
+        input, select, textarea { border:1px solid #d1d5db; border-radius:.6rem; padding:.6rem .8rem; width:100%; font-size:1rem; }
         .dose-taken { border-left:6px solid #059669; }
         .dose-missed { border-left:6px solid #DC2626; }
         .dose-pending { border-left:6px solid #D97706; }
         .view { display: none; }
         .view.active { display: block; }
+        @media (max-width: 640px) { .tabbtn { padding:0.6rem 0.55rem; font-size:0.85rem; } }
     </style>
 </head>
 <body class="bg-[#F7F5F0] text-slate-800">
@@ -28,15 +40,18 @@
     <div class="card p-8 max-w-sm w-full text-center">
         <div class="text-6xl mb-4">❤️</div>
         <h1 class="text-2xl font-bold text-[#0F766E]">SahayakCare</h1>
-        <p class="text-slate-500 mb-6">Elderly Care & Medication Management</p>
+        <p class="text-slate-600 mb-6">Elderly Care & Medication Management</p>
         <div class="space-y-4">
-            <p class="text-sm font-medium">This care profile is protected by a passcode.</p>
-            <input type="password" id="passInput" maxlength="4" inputmode="numeric" placeholder="Enter 4-digit passcode" class="text-center text-2xl tracking-widest">
-            <button id="unlockBtn" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Unlock Profile</button>
-            <p id="lockError" class="text-red-600 hidden">Wrong passcode, please try again.</p>
-            <p class="text-xs text-slate-400">Demo passcode: 1234</p>
+            <p class="text-sm font-medium" data-i18n="lock_protected">This care profile is protected by a passcode.</p>
+            <div class="flex gap-2">
+                <input type="password" id="passInput" maxlength="4" inputmode="numeric" placeholder="Enter 4-digit passcode" class="text-center text-2xl tracking-widest">
+                <button id="showPassBtn" type="button" class="btn btn-secondary" style="width:auto;white-space:nowrap">Show</button>
+            </div>
+            <button id="unlockBtn" data-i18n="lock_unlock" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Unlock Profile</button>
+            <p id="lockError" class="text-red-600 hidden" data-i18n="lock_wrong">Wrong passcode, please try again.</p>
+            <p class="text-xs text-slate-600" data-i18n="lock_hint">Demo passcode: 1234</p>
         </div>
-        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-400 uppercase tracking-wider">
+        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider">
             Demo data — fictional people, not medical advice.
         </div>
     </div>
@@ -82,7 +97,7 @@
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-2">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-800" data-i18n="dash_title">Good day, Shanti Devi 🙏</h2>
-                    <p id="todayDate" class="text-slate-500"></p>
+                    <p id="todayDate" class="text-slate-600"></p>
                 </div>
             </div>
 
@@ -91,21 +106,21 @@
                     <div class="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-2xl">💊</div>
                     <div>
                         <div id="statMeds" class="text-2xl font-bold text-teal-800">–</div>
-                        <div class="text-sm text-slate-500">Medicines today</div>
+                        <div class="text-sm text-slate-600" data-i18n="stat_meds">Medicines today</div>
                     </div>
                 </div>
                 <div class="card p-4 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-2xl">📅</div>
                     <div>
                         <div id="statAppts" class="text-2xl font-bold text-amber-800">–</div>
-                        <div class="text-sm text-slate-500">Upcoming appointments</div>
+                        <div class="text-sm text-slate-600" data-i18n="stat_appts">Upcoming appointments</div>
                     </div>
                 </div>
                 <div class="card p-4 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl">🔥</div>
                     <div>
                         <div id="statStreak" class="text-2xl font-bold text-blue-800">–</div>
-                        <div class="text-sm text-slate-500">Day adherence streak</div>
+                        <div class="text-sm text-slate-600" data-i18n="stat_streak">Day adherence streak</div>
                     </div>
                 </div>
             </div>
@@ -116,9 +131,9 @@
                         <span>📊</span> Medication adherence — last 7 days
                     </h3>
                     <div class="flex flex-col items-center justify-center py-4">
-                        <div id="adherenceRing" class="relative w-32 h-32 flex items-center justify-center">
-                            <!-- SVG Ring will be injected by JS -->
-                            <div id="adherencePct" class="text-4xl font-bold text-[#0F766E]">–</div>
+                        <div class="relative w-32 h-32 flex items-center justify-center">
+                            <div id="adherenceSvg" class="absolute inset-0"></div>
+                            <div id="adherencePct" class="text-4xl font-bold text-[#0F766E] relative">–</div>
                         </div>
                         <p id="adherenceNote" class="mt-4 text-sm text-slate-600 text-center"></p>
                     </div>
@@ -144,7 +159,7 @@
                         <span>👨‍⚕️</span> Next appointment
                     </h3>
                     <div id="nextAppt">
-                        <p class="text-slate-400 italic">Loading appointment details...</p>
+                        <p class="text-slate-600 italic">Loading appointment details...</p>
                     </div>
                 </div>
 
@@ -153,14 +168,14 @@
                         <span>⚠️</span> Needs attention
                     </h3>
                     <div id="reminderPreview" class="space-y-3">
-                        <p class="text-slate-400 italic">Checking reminders...</p>
+                        <p class="text-slate-600 italic">Checking reminders...</p>
                     </div>
                 </div>
             </div>
         </section><section id="view-medicines" class="view hidden">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800" data-i18n="meds_title">💊 Medicines</h2>
-        <button id="addMedBtn" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm">+ Add medicine</button>
+        <button id="addMedBtn" data-i18n="add_med" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm">+ Add medicine</button>
     </div>
     <div id="medList" class="space-y-4"></div>
     <p id="stockNote" class="mt-6 text-sm text-gray-500 italic text-center"></p>
@@ -181,7 +196,7 @@
             </div>
             <div>
                 <span class="block text-sm font-medium text-gray-700 mb-2">Time of day</span>
-                <div class="grid grid-cols-2 gap-2">
+                <div id="medTimeCheckboxes" class="grid grid-cols-2 gap-2">
                     <label class="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-teal-50">
                         <input type="checkbox" name="medTime" value="morning" class="w-5 h-5 text-teal-600 rounded">
                         <span class="text-sm">Morning</span>
@@ -223,7 +238,7 @@
 <section id="view-appointments" class="view hidden">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800" data-i18n="appts_title">📅 Doctor appointments</h2>
-        <button id="addApptBtn" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm">+ Add appointment</button>
+        <button id="addApptBtn" data-i18n="add_appt" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm">+ Add appointment</button>
     </div>
     <div id="apptList" class="space-y-4"></div>
 </section>
@@ -268,7 +283,8 @@
 </div><section id="view-circle" class="view hidden">
     <h2 data-i18n="circle_title" class="text-2xl font-bold mb-4">👨‍👩‍👧 Care Circle</h2>
     <p class="mb-4 text-slate-600">Family and caretakers who share this care profile. Everyone here can view medicines and appointments.</p>
-    <button id="addMemberBtn" class="bg-teal-600 text-white px-4 py-2 rounded-lg mb-6 hover:bg-teal-700 transition-colors">+ Add member</button>
+    <p class="mb-4 text-slate-600">Profile owner: <strong>Shanti Devi</strong> — new members join only after her approval.</p>
+    <button id="addMemberBtn" data-i18n="add_member" class="bg-teal-600 text-white px-4 py-2 rounded-lg mb-6 hover:bg-teal-700 transition-colors">+ Add member</button>
     <div id="circleList" class="space-y-4"></div>
 
     <div id="memberModal" class="modal hidden">
@@ -341,14 +357,19 @@
     <div id="reminderList" class="space-y-4"></div>
 </section>
 
-<footer class="text-center text-sm text-slate-500 mt-8 pb-12">
+<footer class="text-center text-sm text-slate-600 mt-8 pb-12">
     <p>SahayakCare — demo prototype built for Catalyst Solo AI Hackathon by Aman Kumar. Demo data with fictional people — not medical advice.</p>
-    <button id="resetDemo" class="mt-4 text-teal-600 font-medium hover:underline">Reset demo data</button>
+    <div class="flex gap-2 justify-center mt-4 flex-wrap">
+        <button id="shareBtn" class="btn btn-secondary" data-i18n="share_btn">🔗 Share care profile</button>
+        <button id="changePassBtn" class="btn btn-secondary" data-i18n="change_pass_btn">🔑 Change passcode</button>
+        <button id="resetDemo" class="btn btn-secondary">Reset demo data</button>
+    </div>
 </footer>
 </main>
 </div>
 <script>
 const $ = id => document.getElementById(id);
+const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const localISO = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const todayStr = () => localISO(new Date());
 const datePlus = n => {
@@ -357,7 +378,8 @@ const datePlus = n => {
     return localISO(d);
 };
 const fmtDate = iso => {
-    const d = new Date(iso);
+    const parts = String(iso).split('-').map(Number);
+    const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
     return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 };
 const slotLabel = s => {
@@ -378,7 +400,17 @@ const I18N = {
         dash_title: "Good day, Shanti Devi 🙏", adh_title: "Medication adherence — last 7 days",
         today_title: "Today's medicines", next_title: "Next appointment", rem_title: "Needs attention",
         meds_title: "💊 Medicines", appts_title: "📅 Doctor appointments", circle_title: "👨‍👩‍👧 Care Circle",
-        vitals_title: "🩺 Health vitals", reminders_title: "🔔 Reminders"
+        vitals_title: "🩺 Health vitals", reminders_title: "🔔 Reminders",
+        lock_protected: "This care profile is protected by a passcode.",
+        lock_hint: "Demo passcode: 1234", lock_unlock: "Unlock Profile",
+        lock_wrong: "Wrong passcode, please try again.", lock_placeholder: "Enter 4-digit passcode",
+        add_med: "+ Add medicine", add_appt: "+ Add appointment", add_member: "+ Add member",
+        stat_meds: "Medicines today", stat_appts: "Upcoming appointments", stat_streak: "Day adherence streak",
+        taken: "Taken", missed: "Missed", pending: "Pending",
+        all_clear: "All clear — nothing needs attention right now. 🎉",
+        no_meds: "No medicines yet — tap “Add medicine” to get started.",
+        no_appts: "No appointments yet.", no_members: "No members yet.", no_vitals: "No vitals logged yet.",
+        share_btn: "🔗 Share care profile", change_pass_btn: "🔑 Change passcode"
     },
     hi: {
         nav_dashboard: "🏠 डैशबोर्ड", nav_medicines: "💊 दवाइयाँ", nav_appointments: "📅 अपॉइंटमेंट",
@@ -386,11 +418,22 @@ const I18N = {
         dash_title: "नमस्ते, शांति देवी 🙏", adh_title: "दवा पालन — पिछले 7 दिन",
         today_title: "आज की दवाइयाँ", next_title: "अगला अपॉइंटमेंट", rem_title: "ध्यान देने योग्य",
         meds_title: "💊 दवाइयाँ", appts_title: "📅 डॉक्टर अपॉइंटमेंट", circle_title: "👨‍👩‍👧 देखभाल समूह",
-        vitals_title: "🩺 स्वास्थ्य", reminders_title: "🔔 अनुस्मारक"
+        vitals_title: "🩺 स्वास्थ्य", reminders_title: "🔔 अनुस्मारक",
+        lock_protected: "यह देखभाल प्रोफ़ाइल पासकोड से सुरक्षित है।",
+        lock_hint: "डेमो पासकोड: 1234", lock_unlock: "प्रोफ़ाइल खोलें",
+        lock_wrong: "गलत पासकोड, कृपया फिर से कोशिश करें।", lock_placeholder: "4 अंकों का पासकोड डालें",
+        add_med: "+ दवा जोड़ें", add_appt: "+ अपॉइंटमेंट जोड़ें", add_member: "+ सदस्य जोड़ें",
+        stat_meds: "आज की दवाइयाँ", stat_appts: "आगामी अपॉइंटमेंट", stat_streak: "पालन की लकीर (दिन)",
+        taken: "ली गई", missed: "छूटी", pending: "बाकी",
+        all_clear: "सब ठीक है — अभी कुछ नहीं चाहिए। 🎉",
+        no_meds: "अभी कोई दवा नहीं — “Add medicine” दबाकर जोड़ें।",
+        no_appts: "अभी कोई अपॉइंटमेंट नहीं।", no_members: "अभी कोई सदस्य नहीं।", no_vitals: "अभी कोई स्वास्थ्य रिकॉर्ड नहीं।",
+        share_btn: "🔗 प्रोफ़ाइल साझा करें", change_pass_btn: "🔑 पासकोड बदलें"
     }
 };
 
-let state = { medicines: [], appointments: [], circle: [], vitals: [], doseLog: {} };
+const t = k => (I18N[currentLang] && I18N[currentLang][k]) || I18N.en[k] || k;
+let state = { medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: '1234' };
 let currentLang = 'en';
 let dismissedReminders = new Set();
 
@@ -399,12 +442,14 @@ function save() {
 }
 
 function seedData() {
+    state.passcode = '1234';
     state.medicines = [
         { id: 'm1', name: 'Metformin', dose: '500 mg', times: ['morning', 'night'], purpose: 'Diabetes', stock: 18, notes: 'Take with food' },
         { id: 'm2', name: 'Amlodipine', dose: '5 mg', times: ['morning'], purpose: 'Blood pressure', stock: 9, notes: '' },
         { id: 'm3', name: 'Atorvastatin', dose: '10 mg', times: ['night'], purpose: 'Cholesterol', stock: 24, notes: 'Take at bedtime' },
         { id: 'm4', name: 'Vitamin D3', dose: '1000 IU', times: ['morning'], purpose: 'Bone health', stock: 6, notes: 'Once daily' }
     ];
+    state.medicines.forEach(m => { if (!m.createdAt) m.createdAt = datePlus(-6); });
     state.appointments = [
         { id: 'a1', doctor: 'Dr. Ananya Sharma', specialty: 'Cardiology', date: datePlus(3), time: '10:30', place: 'City Heart Clinic', notes: 'ECG review' },
         { id: 'a2', doctor: 'Dr. Rohan Verma', specialty: 'General Physician', date: datePlus(7), time: '11:00', place: 'Sharma Clinic', notes: 'Sugar test reports' },
@@ -437,9 +482,23 @@ function seedData() {
 }
 
 function load() {
-    const data = localStorage.getItem('sahayakcare_v1');
-    if (data) state = JSON.parse(data);
-    else seedData();
+    const hash = location.hash || '';
+    if (hash.startsWith('#p=')) {
+        try {
+            const shared = JSON.parse(decodeURIComponent(escape(atob(hash.slice(3)))));
+            if (shared && Array.isArray(shared.medicines)) {
+                state = shared;
+                save();
+                history.replaceState(null, '', location.pathname);
+                return;
+            }
+        } catch (e) { /* bad share link — fall through to saved data */ }
+    }
+    try {
+        const data = localStorage.getItem('sahayakcare_v1');
+        if (data) { state = JSON.parse(data); return; }
+    } catch (e) { localStorage.removeItem('sahayakcare_v1'); }
+    seedData();
 }
 
 function resetDemo() {
@@ -457,12 +516,13 @@ function toggleLang() {
         const key = el.getAttribute('data-i18n');
         if (I18N[currentLang][key]) el.textContent = I18N[currentLang][key];
     });
+    $('passInput').placeholder = t('lock_placeholder');
     renderAll();
 }
 
 function toggleText() {
-    document.body.classList.toggle('large-text');
-    $('textToggle').textContent = document.body.classList.contains('large-text') ? 'A Normal text' : 'A+ Large text';
+    document.documentElement.classList.toggle('large-text');
+    $('textToggle').textContent = document.documentElement.classList.contains('large-text') ? 'A Normal text' : 'A+ Large text';
 }
 
 function switchTab(tab) {
@@ -474,8 +534,10 @@ function switchTab(tab) {
 }
 
 function markDose(medId, slot, status) {
-    state.doseLog[`${todayStr()}|${medId}|${slot}`] = status;
-    if (status === 'taken') {
+    const key = `${todayStr()}|${medId}|${slot}`;
+    const prev = state.doseLog[key];
+    state.doseLog[key] = status;
+    if (status === 'taken' && prev !== 'taken') {
         const med = state.medicines.find(m => m.id === medId);
         if (med && med.stock > 0) med.stock--;
     }
@@ -485,10 +547,12 @@ function markDose(medId, slot, status) {
 
 function getAdherence() {
     let total = 0, taken = 0, missed = 0;
+    const hr = new Date().getHours();
     for (let i = 0; i < 7; i++) {
         const d = datePlus(-i);
         state.medicines.forEach(m => {
             m.times.forEach(slot => {
+                if (i === 0 && SLOT_HOURS[slot] > hr) return;
                 total++;
                 const res = state.doseLog[`${d}|${m.id}|${slot}`];
                 if (res === 'taken') taken++;
@@ -496,8 +560,24 @@ function getAdherence() {
             });
         });
     }
-    const pct = total ? Math.round((taken / (taken + missed || total)) * 100) : 100;
-    return { pct, taken, total: taken + missed };
+    const pct = total ? Math.round((taken / total) * 100) : 100;
+    return { pct, taken, total };
+}
+
+function adherenceInsight() {
+    const missedBySlot = {};
+    for (let i = 0; i < 7; i++) {
+        const d = datePlus(-i);
+        state.medicines.forEach(m => {
+            m.times.forEach(slot => {
+                if (state.doseLog[`${d}|${m.id}|${slot}`] === 'missed') missedBySlot[slot] = (missedBySlot[slot] || 0) + 1;
+            });
+        });
+    }
+    const entries = Object.entries(missedBySlot);
+    if (!entries.length) return 'No doses missed in the last 7 days.';
+    entries.sort((a, b) => b[1] - a[1]);
+    return slotLabel(entries[0][0]).split(' ').slice(1).join(' ') + ' doses are missed most often.';
 }
 
 function getStreak() {
@@ -506,7 +586,7 @@ function getStreak() {
     
     const isDayComplete = (offset) => {
         const d = datePlus(offset);
-        const dayMeds = state.medicines.filter(m => m.times.length > 0);
+        const dayMeds = state.medicines.filter(m => m.times.length > 0 && (!m.createdAt || m.createdAt <= d));
         if (dayMeds.length === 0) return false;
         for (const m of dayMeds) {
             for (const slot of m.times) {
@@ -538,6 +618,7 @@ function buildReminders() {
     const hr = now.getHours();
     const primary = state.circle.find(c => c.role.toLowerCase().includes('caretaker')) || state.circle[0];
     const email = primary ? primary.email : '';
+    const mailLink = (subject, body) => `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     state.medicines.forEach(m => {
         m.times.forEach(slot => {
@@ -547,24 +628,24 @@ function buildReminders() {
                 list.push({
                     id: `miss-${m.id}-${slot}`,
                     icon: '💊',
-                    text: `Missed: ${m.name} ${m.dose} (${slotLabel(slot)})`,
-                    mailto: `mailto:${email}?subject=SahayakCare reminder: missed dose&body=Shanti Devi missed her ${m.name} (${slot}) dose. Please check in.`
+                    text: `Missed: ${escapeHtml(m.name)} ${escapeHtml(m.dose)} (${slotLabel(slot)})`,
+                    mailto: mailLink('SahayakCare reminder: missed dose', `Shanti Devi missed her ${m.name} (${slot}) dose. Please check in.`)
                 });
             } else if (!status && slotHr - hr <= 2 && slotHr - hr > 0) {
                 list.push({
                     id: `due-${m.id}-${slot}`,
                     icon: '⏰',
-                    text: `Due soon: ${m.name} ${m.dose} (${slotLabel(slot)})`,
-                    mailto: `mailto:${email}?subject=SahayakCare: dose due soon&body=Shanti Devi has a dose of ${m.name} due at ${slotLabel(slot)}.`
+                    text: `Due soon: ${escapeHtml(m.name)} ${escapeHtml(m.dose)} (${slotLabel(slot)})`,
+                    mailto: mailLink('SahayakCare: dose due soon', `Shanti Devi has a dose of ${m.name} due at ${slotLabel(slot)}.`)
                 });
             }
         });
-        if (m.stock <= 5) {
+        if (m.stock <= 10) {
             list.push({
                 id: `stock-${m.id}`,
                 icon: '⚠️',
-                text: `Low stock: ${m.name} (${m.stock} left)`,
-                mailto: `mailto:${email}?subject=SahayakCare: Refill needed&body=The stock for ${m.name} is low (${m.stock} remaining).`
+                text: `Low stock: ${escapeHtml(m.name)} (${m.stock} left)`,
+                mailto: mailLink('SahayakCare: Refill needed', `The stock for ${m.name} is low (${m.stock} remaining).`)
             });
         }
     });
@@ -575,8 +656,8 @@ function buildReminders() {
             list.push({
                 id: `appt-${a.id}`,
                 icon: '📅',
-                text: `Appointment in ${Math.ceil(diff)} day(s): ${a.doctor} at ${a.time}`,
-                mailto: `mailto:${email}?subject=SahayakCare: Upcoming appointment&body=Reminder: Appointment with ${a.doctor} on ${fmtDate(a.date)} at ${a.time} (${a.place}).`
+                text: `Appointment ${diff === 0 ? 'today' : `in ${Math.ceil(diff)} day(s)`}: ${escapeHtml(a.doctor)} at ${a.time}`,
+                mailto: mailLink('SahayakCare: Upcoming appointment', `Reminder: Appointment with ${a.doctor} on ${fmtDate(a.date)} at ${a.time} (${a.place}).`)
             });
         }
     });
@@ -592,14 +673,13 @@ function renderDashboard() {
 
     const adh = getAdherence();
     $('adherencePct').textContent = adh.pct + "%";
-    $('adherenceNote').textContent = `${adh.taken} of ${adh.total} doses taken in the last 7 days`;
+    $('adherenceNote').textContent = `${adh.taken} of ${adh.total} doses taken in the last 7 days. ${adherenceInsight()}`;
     const offset = 339 - (adh.pct / 100) * 339;
-    $('adherenceRing').innerHTML = `
+    $('adherenceSvg').innerHTML = `
         <svg viewBox="0 0 120 120">
             <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" stroke-width="10" />
-            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--primary)" stroke-width="10" 
+            <circle cx="60" cy="60" r="54" fill="none" stroke="#0F766E" stroke-width="10"
                 stroke-dasharray="339" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 60 60)" />
-            <text x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="24" font-weight="bold" fill="var(--primary)">${adh.pct}%</text>
         </svg>
     `;
 
@@ -608,17 +688,15 @@ function renderDashboard() {
         m.times.forEach(slot => {
             const status = state.doseLog[`${todayStr()}|${m.id}|${slot}`] || 'pending';
             dosesHtml += `
-                <div class="dose-row">
+                <div class="dose-row dose-${status}">
                     <div>
-                        <div style="font-weight:600">${m.name} <span style="font-weight:400;color:var(--text-light)">${m.dose}</span></div>
-                        <div style="font-size:0.85rem;color:var(--text-light)">${slotLabel(slot)}</div>
+                        <div style="font-weight:600">${escapeHtml(m.name)} <span style="font-weight:400;color:var(--text-light)">${escapeHtml(m.dose)}</span></div>
+                        <div style="font-size:0.9rem;color:var(--text-light)">${slotLabel(slot)}</div>
                     </div>
-                    <div style="display:flex; gap:0.5rem; align-items:center">
-                        <span class="dose-status dose-${status}">${status.toUpperCase()}</span>
-                        ${status === 'pending' ? `
-                            <button class="btn btn-primary" style="padding:0.3rem 0.6rem; font-size:0.8rem" onclick="markDose('${m.id}','${slot}','taken')">✓ Taken</button>
-                            <button class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.8rem" onclick="markDose('${m.id}','${slot}','missed')">✗ Missed</button>
-                        ` : ''}
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap">
+                        <span class="dose-status dose-${status}">${t(status)}</span>
+                        <button class="btn btn-primary" style="padding:.55rem .8rem;${status === 'taken' ? 'opacity:.55;' : ''}" ${status === 'taken' ? 'disabled' : ''} onclick="markDose('${m.id}','${slot}','taken')">✓ Taken</button>
+                        <button class="btn btn-secondary" style="padding:.55rem .8rem;${status === 'missed' ? 'opacity:.55;' : ''}" ${status === 'missed' ? 'disabled' : ''} onclick="markDose('${m.id}','${slot}','missed')">✗ Missed</button>
                     </div>
                 </div>
             `;
@@ -630,17 +708,17 @@ function renderDashboard() {
     if (upcoming.length > 0) {
         const a = upcoming[0];
         $('nextAppt').innerHTML = `
-            <div style="font-weight:600; font-size:1.1rem">${a.doctor}</div>
-            <div style="color:var(--primary); font-weight:500">${a.specialty}</div>
+            <div style="font-weight:600; font-size:1.1rem">${escapeHtml(a.doctor)}</div>
+            <div style="color:var(--primary); font-weight:500">${escapeHtml(a.specialty)}</div>
             <div style="margin-top:0.5rem">📅 ${fmtDate(a.date)} at ${a.time}</div>
-            <div style="font-size:0.9rem; color:var(--text-light)">📍 ${a.place}</div>
+            <div style="font-size:0.9rem; color:var(--text-light)">📍 ${escapeHtml(a.place)}</div>
         `;
     } else {
         $('nextAppt').textContent = "No upcoming appointments.";
     }
 
     const rems = buildReminders().slice(0, 3);
-    $('reminderPreview').innerHTML = rems.map(r => `<div style="margin-bottom:0.5rem">${r.icon} ${r.text}</div>`).join('') || 'All clear! 🎉';
+    $('reminderPreview').innerHTML = rems.map(r => `<div style="margin-bottom:0.5rem">${r.icon} ${r.text}</div>`).join('') || t('all_clear');
 }
 
 function renderMeds() {
@@ -648,24 +726,26 @@ function renderMeds() {
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:start">
                 <div>
-                    <h3 style="margin:0">${m.name}</h3>
-                    <div style="color:var(--primary); font-weight:600">${m.dose}</div>
+                    <h3 style="margin:0">${escapeHtml(m.name)}</h3>
+                    <div style="color:var(--primary); font-weight:600">${escapeHtml(m.dose)}</div>
                 </div>
                 <div style="text-align:right">
                     <button class="btn btn-secondary" onclick="editMed('${m.id}')">Edit</button>
                     <button class="btn btn-secondary" style="color:var(--danger)" onclick="deleteMed('${m.id}')">Delete</button>
                 </div>
             </div>
-            <p style="margin:0.5rem 0"><strong>Purpose:</strong> ${m.purpose}</p>
+            <p style="margin:0.5rem 0"><strong>Purpose:</strong> ${escapeHtml(m.purpose)}</p>
             <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin:0.5rem 0">
                 ${m.times.map(t => `<span class="chip">${slotLabel(t)}</span>`).join('')}
             </div>
             <div style="font-size:0.9rem; color:var(--text-light)">
                 Stock: ${m.stock} units ${m.stock <= 10 ? '<span style="color:var(--danger);font-weight:600">⚠️ Low stock</span>' : ''}
             </div>
-            ${m.notes ? `<div style="margin-top:0.5rem; font-style:italic; font-size:0.9rem">"${m.notes}"</div>` : ''}
+            ${m.notes ? `<div style="margin-top:0.5rem; font-style:italic; font-size:0.9rem">"${escapeHtml(m.notes)}"</div>` : ''}
         </div>
-    `).join('');
+    `).join('') || '<p class="text-slate-600 text-center">' + t('no_meds') + '</p>';
+    const low = state.medicines.filter(m => m.stock <= 10);
+    $('stockNote').textContent = low.length ? '⚠️ Low stock: ' + low.map(m => m.name).join(', ') + ' — refill soon.' : '';
 }
 
 function editMed(id) {
@@ -692,15 +772,15 @@ function deleteMed(id) {
 }
 
 function renderAppts() {
-    const sorted = [...state.appointments].sort((a, b) => b.date.localeCompare(a.date));
+    const sorted = [...state.appointments].sort((a, b) => a.date.localeCompare(b.date));
     $('apptList').innerHTML = sorted.map(a => {
         const isPast = a.date < todayStr();
         return `
             <div class="card" style="${isPast ? 'opacity:0.7; background:#f8fafc' : ''}">
                 <div style="display:flex; justify-content:space-between; align-items:start">
                     <div>
-                        <h3 style="margin:0">${a.doctor} ${isPast ? '<span class="chip">Done</span>' : ''}</h3>
-                        <div style="color:var(--primary); font-weight:600">${a.specialty}</div>
+                        <h3 style="margin:0">${escapeHtml(a.doctor)} ${isPast ? '<span class="chip">Done</span>' : ''}</h3>
+                        <div style="color:var(--primary); font-weight:600">${escapeHtml(a.specialty)}</div>
                     </div>
                     <div>
                         <button class="btn btn-secondary" onclick="editAppt('${a.id}')">Edit</button>
@@ -710,11 +790,11 @@ function renderAppts() {
                 <div style="margin-top:0.5rem">
                     <strong>📅 ${fmtDate(a.date)}</strong> at ${a.time}
                 </div>
-                <div style="font-size:0.9rem">📍 ${a.place}</div>
-                ${a.notes ? `<div style="margin-top:0.5rem; font-size:0.9rem; color:var(--text-light)">Note: ${a.notes}</div>` : ''}
+                <div style="font-size:0.9rem">📍 ${escapeHtml(a.place)}</div>
+                ${a.notes ? `<div style="margin-top:0.5rem; font-size:0.9rem; color:var(--text-light)">Note: ${escapeHtml(a.notes)}</div>` : ''}
             </div>
         `;
-    }).join('');
+    }).join('') || '<p class="text-slate-600 text-center">' + t('no_appts') + '</p>';
 }
 
 function editAppt(id) {
@@ -742,23 +822,40 @@ function renderCircle() {
     $('circleList').innerHTML = state.circle.map(c => {
         const initials = c.name.split(' ').map(n => n[0]).join('').toUpperCase();
         const isPrimary = c.role.toLowerCase().includes('caretaker');
+        const pending = c.status === 'pending';
         return `
             <div class="card" style="display:flex; gap:1rem; align-items:center">
-                <div class="avatar">${initials}</div>
+                <div class="avatar">${escapeHtml(initials)}</div>
                 <div style="flex:1">
-                    <h3 style="margin:0">${c.name}</h3>
-                    <span class="chip" style="${isPrimary ? 'background:var(--primary); color:white' : ''}">${c.role}</span>
+                    <h3 style="margin:0">${escapeHtml(c.name)}</h3>
+                    <span class="chip" style="${isPrimary ? 'background:var(--primary); color:white' : ''}">${escapeHtml(c.role)}</span>
+                    ${pending ? '<span class="chip" style="background:#fef3c7;color:#92400e">Pending approval</span>' : ''}
                     <div style="margin-top:0.4rem; font-size:0.9rem">
-                        <a href="tel:${c.phone}" style="text-decoration:none; color:var(--primary)">📞 ${c.phone}</a><br>
-                        <a href="mailto:${c.email}" style="text-decoration:none; color:var(--primary)">✉️ ${c.email}</a>
+                        <a href="tel:${escapeHtml(c.phone)}" style="text-decoration:none; color:var(--primary)">📞 ${escapeHtml(c.phone)}</a><br>
+                        <a href="mailto:${escapeHtml(c.email)}" style="text-decoration:none; color:var(--primary)">✉️ ${escapeHtml(c.email)}</a>
                     </div>
                 </div>
-                <div>
+                <div style="display:flex; flex-direction:column; gap:0.5rem">
+                    ${pending ? `<button class="btn btn-primary" onclick="approveMember('${c.id}')">Approve</button>` : ''}
                     <button class="btn btn-secondary" onclick="editMember('${c.id}')">Edit</button>
+                    <button class="btn btn-secondary" style="color:var(--danger)" onclick="deleteMember('${c.id}')">Delete</button>
                 </div>
             </div>
         `;
-    }).join('');
+    }).join('') || '<p class="text-slate-600 text-center">' + t('no_members') + '</p>';
+}
+
+function deleteMember(id) {
+    if (confirm("Remove this member from the care circle?")) {
+        state.circle = state.circle.filter(c => c.id !== id);
+        save();
+        renderAll();
+    }
+}
+
+function approveMember(id) {
+    const c = state.circle.find(x => x.id === id);
+    if (c) { c.status = 'approved'; save(); renderAll(); }
 }
 
 function editMember(id) {
@@ -774,32 +871,31 @@ function editMember(id) {
 
 function renderVitals() {
     const types = [...new Set(state.vitals.map(v => v.type))];
-    $('vitalLatest').innerHTML = types.map(t => {
-        const latest = state.vitals.filter(v => v.type === t).sort((a, b) => b.date.localeCompare(a.date))[0];
+    $('vitalLatest').innerHTML = types.map(ty => {
+        const latest = state.vitals.filter(v => v.type === ty).sort((a, b) => b.date.localeCompare(a.date))[0];
         return `
             <div class="card" style="text-align:center">
-                <div style="color:var(--text-light); font-size:0.9rem">${latest.type}</div>
-                <div style="font-size:1.5rem; font-weight:bold; color:var(--primary); margin:0.3rem 0">${latest.value}</div>
+                <div style="color:var(--text-light); font-size:0.9rem">${escapeHtml(latest.type)}</div>
+                <div style="font-size:1.5rem; font-weight:bold; color:var(--primary); margin:0.3rem 0">${escapeHtml(latest.value)}</div>
                 <div style="font-size:0.8rem; color:var(--text-light)">${fmtDate(latest.date)}</div>
             </div>
         `;
-    }).join('');
+    }).join('') || '<p class="text-slate-600">' + t('no_vitals') + '</p>';
 
     const history = [...state.vitals].sort((a, b) => b.date.localeCompare(a.date));
     $('vitalHistory').innerHTML = history.map(v => `
-        <tr>
-            <td>${fmtDate(v.date)}</td>
-            <td>${v.type}</td>
-            <td><strong>${v.value}</strong></td>
-            <td>${v.note}</td>
-        </tr>
-    `).join('');
+        <div class="card" style="display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap">
+            <div><strong>${escapeHtml(v.type)}</strong> <span style="color:var(--text-light)">${fmtDate(v.date)}</span></div>
+            <div style="font-weight:700; color:var(--primary)">${escapeHtml(v.value)}</div>
+            <div style="color:var(--text-light); font-size:0.9rem">${escapeHtml(v.note)}</div>
+        </div>
+    `).join('') || '<p class="text-slate-600">' + t('no_vitals') + '</p>';
 }
 
 function renderReminders() {
     const list = buildReminders();
     if (list.length === 0) {
-        $('reminderList').innerHTML = '<div class="card" style="text-align:center; padding:2rem">All clear — nothing needs attention right now. 🎉</div>';
+        $('reminderList').innerHTML = '<div class="card" style="text-align:center; padding:2rem">' + t('all_clear') + '</div>';
         return;
     }
     $('reminderList').innerHTML = list.map(r => `
@@ -823,6 +919,22 @@ function dismissReminder(id) {
     renderAll();
 }
 
+function shareProfile() {
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    const url = location.origin + location.pathname + '#p=' + encoded;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => alert('Share link copied! Anyone with the link can open this care profile.'));
+    } else {
+        prompt('Copy this share link:', url);
+    }
+}
+
+function changePasscode() {
+    const next = prompt('Enter a new 4-digit passcode:', state.passcode || '1234');
+    if (next && /^\d{4}$/.test(next)) { state.passcode = next; save(); alert('Passcode changed.'); }
+    else if (next) alert('Passcode must be exactly 4 digits.');
+}
+
 function renderAll() {
     renderDashboard();
     renderMeds();
@@ -833,7 +945,7 @@ function renderAll() {
 }
 
 $('unlockBtn').onclick = () => {
-    if ($('passInput').value === "1234") {
+    if ($('passInput').value === (state.passcode || "1234")) {
         $('lockScreen').style.display = 'none';
         $('app').style.display = 'block';
         renderAll();
@@ -843,6 +955,13 @@ $('unlockBtn').onclick = () => {
 };
 
 $('passInput').onkeypress = (e) => { if (e.key === 'Enter') $('unlockBtn').click(); };
+
+$('showPassBtn').onclick = () => {
+    const inp = $('passInput');
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    $('showPassBtn').textContent = show ? 'Hide' : 'Show';
+};
 
 $('lockBtn').onclick = () => {
     $('app').style.display = 'none';
@@ -876,12 +995,14 @@ $('medSave').onclick = () => {
     document.querySelectorAll('#medTimeCheckboxes input:checked').forEach(cb => times.push(cb.value));
     
     const id = $('medEditId').value;
+    const existing = id ? state.medicines.find(m => m.id === id) : null;
     const medData = {
         id: id || 'm' + Date.now(),
         name, dose, times,
         purpose: $('medPurpose').value,
         stock: parseInt($('medStock').value) || 0,
-        notes: $('medNotes').value
+        notes: $('medNotes').value,
+        createdAt: existing ? (existing.createdAt || todayStr()) : todayStr()
     };
 
     if (id) {
@@ -937,7 +1058,7 @@ $('addMemberBtn').onclick = () => {
     $('memberModalTitle').textContent = "Add Member";
     $('memberEditId').value = '';
     $('memberName').value = '';
-    $('memberRole').value = '';
+    $('memberRole').value = 'Family';
     $('memberPhone').value = '';
     $('memberEmail').value = '';
     $('memberModal').style.display = 'flex';
@@ -948,12 +1069,14 @@ $('memberSave').onclick = () => {
     if (!name) return alert("Name is required");
 
     const id = $('memberEditId').value;
+    const existingMember = id ? state.circle.find(c => c.id === id) : null;
     const memberData = {
         id: id || 'c' + Date.now(),
         name,
         role: $('memberRole').value,
         phone: $('memberPhone').value,
-        email: $('memberEmail').value
+        email: $('memberEmail').value,
+        status: existingMember ? (existingMember.status || 'approved') : 'pending'
     };
 
     if (id) {
@@ -987,12 +1110,18 @@ $('vitalAdd').onclick = () => {
     m.onclick = (e) => { if (e.target === m) m.style.display = 'none'; };
 });
 
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { ['medModal', 'apptModal', 'memberModal'].forEach(id => $(id).style.display = 'none'); }
+});
+
 $('medCancel').onclick = () => $('medModal').style.display = 'none';
 $('apptCancel').onclick = () => $('apptModal').style.display = 'none';
 $('memberCancel').onclick = () => $('memberModal').style.display = 'none';
 $('langToggle').onclick = toggleLang;
 $('textToggle').onclick = toggleText;
 $('resetDemo').onclick = resetDemo;
+$('shareBtn').onclick = shareProfile;
+$('changePassBtn').onclick = changePasscode;
 
 document.addEventListener('DOMContentLoaded', () => {
     load();
