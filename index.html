@@ -52,7 +52,6 @@
             <button id="unlockBtn" data-i18n="lock_unlock" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Unlock Profile</button>
             <p id="lockError" class="text-red-600 hidden" data-i18n="lock_wrong">Wrong passcode, please try again.</p>
             <p class="text-center text-sm"><button id="lockAuthBtn" type="button" class="text-teal-700 underline" data-i18n="lock_signin_link">Want this profile on another device? Sign in for cloud sync</button></p>
-            <p id="sampleNote" class="hidden text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">Sample profile loaded — unlock with passcode 1234.</p>
             <button id="sampleProfileBtn" type="button" class="text-sm text-teal-700 underline" data-i18n="lock_sample">Explore a sample profile</button>
         </div>
         <div class="mt-8 pt-6 border-t border-slate-100 text-sm text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
@@ -461,6 +460,28 @@
     </div>
 </div>
 
+<div id="samplePassModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="card p-6 w-full max-w-md">
+        <h3 class="text-xl font-bold mb-2">🔑 Set a passcode for the sample profile</h3>
+        <p class="text-sm text-slate-600 mb-4" data-i18n="sample_pass_hint">Choose your own 4-digit passcode to open this sample profile. Nothing is preset — you pick it.</p>
+        <div class="space-y-4">
+            <div>
+                <label for="samplePass" class="block text-sm font-medium text-slate-700" data-i18n="sample_pass">Set a 4-digit passcode</label>
+                <input type="password" id="samplePass" maxlength="4" inputmode="numeric" class="w-full border rounded-lg p-2 mt-1 text-center text-2xl tracking-widest">
+            </div>
+            <div>
+                <label for="samplePassConfirm" class="block text-sm font-medium text-slate-700" data-i18n="sample_pass_confirm">Confirm passcode</label>
+                <input type="password" id="samplePassConfirm" maxlength="4" inputmode="numeric" class="w-full border rounded-lg p-2 mt-1 text-center text-2xl tracking-widest">
+            </div>
+            <p id="samplePassError" class="text-red-600 hidden text-sm text-center"></p>
+            <div class="flex gap-2 pt-2">
+                <button id="samplePassSave" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-semibold" data-i18n="sample_pass_open">Open sample profile</button>
+                <button id="samplePassCancel" class="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-semibold" data-i18n="sample_pass_cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="shareModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="card p-6 w-full max-w-md">
         <h3 class="text-xl font-bold mb-2">🔗 Share care profile</h3>
@@ -618,6 +639,11 @@ const I18N = {
         setup_sample: "Explore a sample profile",
         footer_advice: "SahayakCare does not replace medical advice.",
         sample_banner: "You're exploring a sample profile with fictional data.",
+        sample_pass_hint: "Choose your own 4-digit passcode to open this sample profile. Nothing is preset — you pick it.",
+        sample_pass: "Set a 4-digit passcode",
+        sample_pass_confirm: "Confirm passcode",
+        sample_pass_open: "Open sample profile",
+        sample_pass_cancel: "Cancel",
         add_med: "+ Add medicine", add_appt: "+ Add appointment", add_member: "+ Add member",
         stat_meds: "Medicines today", stat_appts: "Upcoming appointments", stat_streak: "Day adherence streak",
         taken: "Taken", missed: "Missed", pending: "Pending",
@@ -649,6 +675,11 @@ const I18N = {
         setup_sample: "नमूना प्रोफ़ाइल देखें",
         footer_advice: "SahayakCare चिकित्सा सलाह का विकल्प नहीं है।",
         sample_banner: "आप नमूना प्रोफ़ाइल देख रहे हैं — यह डेटा काल्पनिक है।",
+        sample_pass_hint: "इस नमूना प्रोफ़ाइल को खोलने के लिए अपना 4 अंकों का पासकोड चुनें। कुछ भी पहले से तय नहीं है — आप खुद चुनें।",
+        sample_pass: "4 अंकों का पासकोड सेट करें",
+        sample_pass_confirm: "पासकोड दोबारा डालें",
+        sample_pass_open: "नमूना प्रोफ़ाइल खोलें",
+        sample_pass_cancel: "रद्द करें",
         add_med: "+ दवा जोड़ें", add_appt: "+ अपॉइंटमेंट जोड़ें", add_member: "+ सदस्य जोड़ें",
         stat_meds: "आज की दवाइयाँ", stat_appts: "आगामी अपॉइंटमेंट", stat_streak: "पालन की लकीर (दिन)",
         taken: "ली गई", missed: "छूटी", pending: "बाकी",
@@ -688,11 +719,13 @@ function save() {
     api.syncPush(); // fire-and-forget: silent if offline / not signed in
 }
 
-function sampleData() {
+function sampleData(passcode) {
     state.profileName = 'Shanti Devi';
     state.profileAge = 74;
     state.sample = true;
-    state.passcode = '1234';
+    // The sample has NO preset passcode: the caller passes the
+    // 4-digit passcode the user just set in the sample-passcode modal.
+    state.passcode = passcode;
     state.medicines = [
         { id: 'm1', name: 'Metformin', dose: '500 mg', times: ['morning', 'night'], purpose: 'Diabetes', stock: 18, notes: 'Take with food' },
         { id: 'm2', name: 'Amlodipine', dose: '5 mg', times: ['morning'], purpose: 'Blood pressure', stock: 9, notes: '' },
@@ -1377,7 +1410,6 @@ function showBootScreen() {
     $('app').style.display = 'none';
     $('passInput').value = '';
     $('lockError').style.display = 'none';
-    $('sampleNote').style.display = 'none';
     // A share import has a name but no passcode yet: pre-fill the setup
     // form so the recipient only sets a passcode.
     if (!hasProfile && state.profileName) {
@@ -1405,14 +1437,39 @@ $('lockSignOutBtn').onclick = () => { api.token = ''; clearUnlockedSession(); re
 // setup screen). One tap must not silently wipe a real local profile:
 // confirm first. (The token is still cleared below so fictional data
 // never overwrites the signed-in user's real cloud profile.)
+// The sample has NO preset passcode: after the confirm, an in-app
+// modal asks the user to set their own 4-digit passcode and the
+// sample opens with THAT passcode. A native prompt dialog must never be
+// used here — automated browsers auto-accept it with an unseen
+// value, which is exactly how the old passcode lockout happened.
 function loadSampleProfile() {
     if (!confirm('Load the sample profile? This replaces the profile on this device.')) return;
+    openSamplePassModal();
+}
+function openSamplePassModal() {
+    $('samplePass').value = '';
+    $('samplePassConfirm').value = '';
+    $('samplePassError').style.display = 'none';
+    $('samplePassModal').style.display = 'flex';
+}
+$('samplePassCancel').onclick = () => $('samplePassModal').style.display = 'none';
+$('samplePassSave').onclick = () => {
+    const pass = $('samplePass').value;
+    const confirmPass = $('samplePassConfirm').value;
+    const err = $('samplePassError');
+    const fail = msg => { err.textContent = msg; err.style.display = 'block'; };
+    if (!/^\d{4}$/.test(pass)) return fail('Passcode must be exactly 4 digits.');
+    if (pass !== confirmPass) return fail('Passcodes do not match.');
     api.token = '';
     clearUnlockedSession();
-    sampleData();
-    showBootScreen();
-    $('sampleNote').style.display = 'block';
-}
+    sampleData(pass);
+    err.style.display = 'none';
+    $('samplePassModal').style.display = 'none';
+    // The user just set this passcode — open the dashboard directly
+    // instead of making them re-type it on the lock screen.
+    setUnlockedSession();
+    openApp();
+};
 $('sampleProfileBtn').onclick = loadSampleProfile;
 $('setupSampleBtn').onclick = loadSampleProfile;
 $('setupSignInLink').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
@@ -1681,12 +1738,12 @@ $('authSignUp').onclick = async () => {
     renderAll();
 };
 
-[medModal, apptModal, memberModal, authModal, passModal, shareModal].forEach(m => {
+[medModal, apptModal, memberModal, authModal, passModal, shareModal, samplePassModal].forEach(m => {
     m.onclick = (e) => { if (e.target === m) m.style.display = 'none'; };
 });
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { ['medModal', 'apptModal', 'memberModal', 'authModal', 'passModal', 'shareModal'].forEach(id => $(id).style.display = 'none'); }
+    if (e.key === 'Escape') { ['medModal', 'apptModal', 'memberModal', 'authModal', 'passModal', 'shareModal', 'samplePassModal'].forEach(id => $(id).style.display = 'none'); }
 });
 
 $('medCancel').onclick = () => $('medModal').style.display = 'none';

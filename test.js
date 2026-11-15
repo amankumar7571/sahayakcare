@@ -75,9 +75,10 @@ const stateLine = (script.match(/let state = \{[^;]*\};/) || [])[0] || '';
 check('initial state has an empty passcode', /passcode: ''/.test(stateLine));
 check('initial state starts empty (no seeded medicines)', /medicines: \[\]/.test(stateLine));
 check('unlock never falls back to a hardcoded passcode', !/\|\| ['"]1234['"]/.test(script));
-check('quoted "1234" appears exactly once in the script (the sample profile passcode)', (script.match(/'1234'/g) || []).length === 1);
+check('no hardcoded "1234" remains in the script', !/'1234'/.test(script));
+check('no "passcode 1234" text remains in the HTML', !/passcode 1234/i.test(html));
 check('load() never seeds demo data', !/seedData/.test(script));
-check('sampleData is called from exactly one place (the sample link)', (script.match(/sampleData\(\)/g) || []).length === 2);
+check('sampleData is called from exactly one place (the sample link)', (script.match(/sampleData\(/g) || []).length === 2);
 check('no "Demo passcode" text anywhere', !/Demo passcode/i.test(html));
 check('no "DEMO DATA" footer', !/DEMO DATA/.test(html));
 check('medical-advice footer present', /does not replace medical advice/.test(html));
@@ -174,7 +175,7 @@ check('shared loadSampleProfile function exists', /function loadSampleProfile\(\
 check('lock-screen sample button uses the shared function', /\$\('sampleProfileBtn'\)\.onclick = loadSampleProfile/.test(script));
 check('setup-screen sample button uses the shared function', /\$\('setupSampleBtn'\)\.onclick = loadSampleProfile/.test(script));
 check('sample confirm still guards the shared path', /function loadSampleProfile\(\)[\s\S]*?confirm\('Load the sample profile\?/.test(script));
-check('sampleData still called from exactly one place', (script.match(/sampleData\(\)/g) || []).length === 2);
+check('sampleData still called from exactly one place', (script.match(/sampleData\(/g) || []).length === 2);
 // 12b. Dismissed reminders survive a reload (separate key, date-scoped,
 //      never synced to the cloud)
 check('dismissed-reminders key is separate from state', /DISMISSED_KEY = 'sahayakcare_dismissed_v1'/.test(script));
@@ -222,7 +223,7 @@ check('Lock button clears the session flag', /\$\('lockBtn'\)\.onclick = \(\) =>
 check('lock-screen sign-out clears the session flag', /\$\('lockSignOutBtn'\)\.onclick = \(\) => \{ api\.token = ''; clearUnlockedSession\(\); refreshAuthUI\(\); \}/.test(script));
 check('auth-modal sign-out clears the session flag', /\$\('authSignOut'\)\.onclick = \(\) => \{[\s\S]*?clearUnlockedSession\(\)/.test(script));
 check('setupSubmit clears the session flag (new profile, new passcode)', /\$\('setupSubmit'\)\.onclick = \(\) => \{[\s\S]*?clearUnlockedSession\(\)/.test(script));
-check('sample load clears the session flag', /function loadSampleProfile\(\)[\s\S]*?clearUnlockedSession\(\)/.test(script));
+check('sample load clears the session flag (in the sample save handler)', /\$\('samplePassSave'\)\.onclick = \(\) => \{[\s\S]*?clearUnlockedSession\(\)/.test(script));
 check('resetDemo clears the session flag', /function resetDemo[\s\S]*?clearUnlockedSession\(\)/.test(script));
 check('sign-in returns to the boot screen (passcode still required)', /\$\('authSignIn'\)\.onclick = async \(\) => \{[\s\S]*?showBootScreen\(\)/.test(script));
 
@@ -245,6 +246,32 @@ check('sign-up shows the setup screen right after the reset (even if the app was
 check('setupSubmit still saves (fresh profile syncs to the new account)', /\$\('setupSubmit'\)\.onclick = \(\) => \{[\s\S]*?clearUnlockedSession\(\);\s*save\(\);/.test(script));
 check('sign-in still uses syncAfterSignIn (unchanged)', /await syncAfterSignIn\(\)/.test(script));
 check('syncAfterSignIn still pushes local data when pull finds nothing', /if \(!pulled\) await api\.syncPush\(\)/.test(script));
+
+// 15. Round 6: the sample profile has NO preset passcode — it opens
+//     with a passcode the user sets in an in-app modal (Aman: "default
+//     1234 passcode still there, it should open with their passcode").
+check('sample note element (with the 1234 hint) is gone', !htmlIds.has('sampleNote'));
+check('sampleData takes the user-set passcode as a parameter', /function sampleData\(passcode\)/.test(script));
+check('sampleData stores the passed-in passcode (no hardcoded value)', /function sampleData\(passcode\)[\s\S]*?state\.passcode = passcode;/.test(script));
+check('sample passcode modal exists', htmlIds.has('samplePassModal'));
+for (const id of ['samplePass', 'samplePassConfirm', 'samplePassError', 'samplePassSave', 'samplePassCancel']) {
+  check(`sample passcode modal field #${id} exists`, htmlIds.has(id));
+}
+check('sample load still confirms before replacing the profile', /function loadSampleProfile\(\)[\s\S]*?confirm\('Load the sample profile\?/.test(script));
+check('sample load opens the passcode modal after the confirm', /function loadSampleProfile\(\)[\s\S]*?openSamplePassModal\(\)/.test(script));
+const sampleSaveFn = (script.match(/\$\('samplePassSave'\)\.onclick = \(\) => \{[\s\S]*?\n\};/) || [])[0] || '';
+check('sample modal validates the passcode is exactly 4 digits', /\/\^\\d\{4\}\$\//.test(sampleSaveFn));
+check('sample modal checks the confirmation matches', /pass !== confirmPass/.test(sampleSaveFn));
+check('sample modal shows an inline error (never a native dialog)', /samplePassError/.test(sampleSaveFn) && !/alert\(|prompt\(/.test(sampleSaveFn));
+check('sample modal loads the sample with the user-set passcode', /sampleData\(pass\)/.test(sampleSaveFn));
+check('sample modal signs out first (sample never overwrites the cloud backup)', /api\.token = ''/.test(sampleSaveFn));
+check('sample modal opens the dashboard directly after setting the passcode', /setUnlockedSession\(\)[\s\S]*?openApp\(\)/.test(sampleSaveFn));
+check('sample passcode modal is in the backdrop-click close list', /\[medModal, apptModal, memberModal, authModal, passModal, shareModal, samplePassModal\]/.test(script));
+check('sample passcode modal is in the Escape close list', /'samplePassModal'/.test(script));
+check('sample modal i18n: hint in English', /sample_pass_hint: "Choose your own 4-digit passcode to open this sample profile\. Nothing is preset — you pick it\."/.test(script));
+check('sample modal i18n: hint in Hindi', /sample_pass_hint: "इस नमूना प्रोफ़ाइल को खोलने के लिए अपना 4 अंकों का पासकोड चुनें। कुछ भी पहले से तय नहीं है — आप खुद चुनें।"/.test(script));
+check('sample modal i18n: open button in English', /sample_pass_open: "Open sample profile"/.test(script));
+check('sample modal i18n: open button in Hindi', /sample_pass_open: "नमूना प्रोफ़ाइल खोलें"/.test(script));
 
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);

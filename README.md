@@ -12,7 +12,7 @@ Built solo for **Catalyst — Solo AI Hackathon** (MnM / Makers Need More × Pro
 
 Live: https://stalwart-shortbread-198c2f.netlify.app
 
-1. **Create your care profile** — enter the elderly person's name, set a 4-digit passcode, and you are in with an empty profile. Or tap **Explore a sample profile** to try a pre-filled one (passcode `1234`).
+1. **Create your care profile** — enter the elderly person's name, set a 4-digit passcode, and you are in with an empty profile. Or tap **Explore a sample profile** to try a pre-filled one (you set your own 4-digit passcode when you open it — nothing is preset).
 2. Add a medicine — watch the dashboard, adherence ring and streak move.
 3. Open **Reminders** — missed and due-soon doses, upcoming appointments, low stock.
 4. Tap **Send email reminder** — a pre-filled email to the primary caretaker opens in your mail app.
@@ -38,7 +38,7 @@ Live: https://stalwart-shortbread-198c2f.netlify.app
 - **Cloud account (the real auth):** sign up / sign in with email + password from the lock screen or the ☁️ Cloud sync button. Passwords are bcrypt-hashed, sessions are JWTs, and every user only sees their own data. The backend is FastAPI + SQLite on Render's free tier, live at https://sahayakcare.onrender.com.
 - **Passcode (per profile):** the profile is protected by a 4-digit passcode chosen when the profile is created; it can be changed after unlocking. It never leaves the device and is never sent to the server.
 - **First run:** a new visitor creates a profile (name + passcode) and starts empty — no pre-filled people or medicines.
-- **Sample profile:** "Explore a sample profile" loads clearly-labelled fictional data (Shanti Devi, passcode 1234) to try the app. It is local-only and never touches a real account.
+- **Sample profile:** "Explore a sample profile" loads clearly-labelled fictional data (Shanti Devi) to try the app — you set your own 4-digit passcode when you open it. It is local-only and never touches a real account.
 
 ## Tech
 
@@ -50,7 +50,7 @@ Built by prompting Gemini, then hand-verified — every feature was traced in th
 
 ## Tests
 
-`node test.js` — 306 checks: JS syntax, every `id` the script references exists in the HTML, every CSS class/variable the rendered views use is defined, no table rows outside a table, mailto links are encoded, every `data-i18n` key exists in both languages, plus the real-app checks (no hardcoded passcode, no seeded data on boot, no demo labels, setup screen + lock-screen sign-in + sample link present) and the panel-fix checks (setup preserves pulled cloud data, 401 vs 5xx auth errors with cold-start retry, share links carry no passcode, sign-in pushes local data when no server state exists, adherence createdAt guard, share-import sign-out + defaults, sample confirm, empty-adherence dash, contrast, passcode-change modal, share modal, future-slot disabling, reminders consistency, setup-screen sample link, dismissed-reminder persistence, lock-screen sign-in hint).
+`node test.js` — 340 checks: JS syntax, every `id` the script references exists in the HTML, every CSS class/variable the rendered views use is defined, no table rows outside a table, mailto links are encoded, every `data-i18n` key exists in both languages, plus the real-app checks (no hardcoded passcode, no seeded data on boot, no demo labels, setup screen + lock-screen sign-in + sample link present) and the panel-fix checks (setup preserves pulled cloud data, 401 vs 5xx auth errors with cold-start retry, share links carry no passcode, sign-in pushes local data when no server state exists, adherence createdAt guard, share-import sign-out + defaults, sample confirm, empty-adherence dash, contrast, passcode-change modal, share modal, future-slot disabling, reminders consistency, setup-screen sample link, dismissed-reminder persistence, lock-screen sign-in hint).
 
 ## Honest notes
 
