@@ -13,5 +13,9 @@ services:
     envVars:
       - key: JWT_SECRET_KEY
         generateValue: true
+      # Pin Python 3.12: Render's default 3.14 has no prebuilt wheel for
+      # pydantic-core 2.33.0 and building it from source fails (hit 15 Nov).
+      - key: PYTHON_VERSION
+        value: 3.12.0
       - key: CORS_ALLOW_ORIGINS
         value: "*"
