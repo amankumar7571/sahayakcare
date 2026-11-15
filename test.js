@@ -164,5 +164,37 @@ for (const [fn, msg] of [['deleteMed', 'Remove this medicine?'], ['deleteAppt', 
   check(`${fn} confirms before deleting`, new RegExp(`function ${fn}[\\s\\S]*?confirm\\("${msg.replace('?', '\\?')}`).test(script));
 }
 
+// 12. Fix round 3 (15 Nov): setup-screen sample entry, persisted
+//     dismissals, signed-in lock-screen hint
+// 12a. A fresh visitor only ever sees the setup screen, so the sample
+//      profile must be reachable from there too — same shared path.
+check('setup screen sample button exists', htmlIds.has('setupSampleBtn'));
+check('setup sample button sits inside the setup screen', /id="setupScreen"[\s\S]*?id="setupSampleBtn"/.test(html));
+check('shared loadSampleProfile function exists', /function loadSampleProfile\(\)/.test(script));
+check('lock-screen sample button uses the shared function', /\$\('sampleProfileBtn'\)\.onclick = loadSampleProfile/.test(script));
+check('setup-screen sample button uses the shared function', /\$\('setupSampleBtn'\)\.onclick = loadSampleProfile/.test(script));
+check('sample confirm still guards the shared path', /function loadSampleProfile\(\)[\s\S]*?confirm\('Load the sample profile\?/.test(script));
+check('sampleData still called from exactly one place', (script.match(/sampleData\(\)/g) || []).length === 2);
+// 12b. Dismissed reminders survive a reload (separate key, date-scoped,
+//      never synced to the cloud)
+check('dismissed-reminders key is separate from state', /DISMISSED_KEY = 'sahayakcare_dismissed_v1'/.test(script));
+check('dismissal keys are date-prefixed', /const dismissKey = id => `\$\{todayStr\(\)\}\|\$\{id\}`/.test(script));
+check('loadDismissed helper exists', /function loadDismissed\(\)/.test(script));
+check('loadDismissed drops stale (non-today) entries', /k\.startsWith\(todayStr\(\) \+ '\|'\)/.test(script));
+check('saveDismissed writes the separate key', /function saveDismissed\(\)[\s\S]*?localStorage\.setItem\(DISMISSED_KEY/.test(script));
+check('dismissals are loaded at boot', /load\(\);\s*\n\s*loadDismissed\(\);/.test(script));
+check('buildReminders filter uses the date-prefixed key', /dismissedReminders\.has\(dismissKey\(item\.id\)\)/.test(script));
+check('dismissReminder persists the dismissal', /function dismissReminder[\s\S]*?saveDismissed\(\)/.test(script));
+check('markDose Taken drops the dismissal for that dose', /function markDose[\s\S]*?dismissedReminders\.delete\(dismissKey\(`\$\{p\}-\$\{medId\}-\$\{slot\}`\)\)/.test(script));
+check('dismissals are never sent to the cloud (syncPush payload)', !/syncPush\(\)[\s\S]*?dismissed/.test(script.split('async syncPush')[1].split('},')[0]));
+check('resetDemo clears persisted dismissals', /function resetDemo[\s\S]*?localStorage\.removeItem\(DISMISSED_KEY\)[\s\S]*?dismissedReminders\.clear\(\)/.test(script));
+// 12c. Lock screen explains the two locks when signed in
+check('signed-in hint element exists', htmlIds.has('lockSignedInHint'));
+check('hint sits under the signed-in state line', /id="lockAuthState"[\s\S]*?id="lockSignedInHint"/.test(html));
+check('hint is shown when signed in', /function refreshLockAuthUI[\s\S]*?\$\('lockSignedInHint'\)\.style\.display = email \? 'block' : 'none'/.test(script));
+check('hint English text present', /lock_signedin_hint: "You're signed in for cloud sync — enter your 4-digit passcode to open this profile\."/.test(script));
+check('hint Hindi text present', /lock_signedin_hint: "आप क्लाउड सिंक के लिए साइन इन हैं — प्रोफ़ाइल खोलने के लिए अपना 4 अंकों का पासकोड डालें।"/.test(script));
+check('auth flow is unchanged (no auto-unlock on sign-in)', !/authSignIn[\s\S]*?unlockBtn['"]\)\.click/.test(script));
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);

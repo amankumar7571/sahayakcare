@@ -44,6 +44,7 @@
         <div class="space-y-4">
             <button id="lockAuthBtn" data-i18n="lock_signin" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Sign in / Create account</button>
             <p id="lockAuthState" class="hidden text-sm text-slate-600"><span id="lockAuthEmail"></span> · <button id="lockSignOutBtn" type="button" class="text-teal-700 underline">Sign out</button></p>
+            <p id="lockSignedInHint" class="hidden text-sm text-teal-700" data-i18n="lock_signedin_hint">You're signed in for cloud sync — enter your 4-digit passcode to open this profile.</p>
             <div class="flex items-center gap-3 text-xs text-slate-600">
                 <div class="flex-1 border-t border-slate-200"></div>
                 <span data-i18n="lock_or_passcode">or unlock with your passcode</span>
@@ -89,6 +90,7 @@
             <p id="setupError" class="text-red-600 hidden text-sm text-center"></p>
             <button id="setupSubmit" data-i18n="setup_submit" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Create profile</button>
             <p class="text-center text-sm"><button id="setupSignInLink" type="button" class="text-teal-700 underline" data-i18n="setup_signin">Already have an account? Sign in</button></p>
+            <p class="text-center text-sm"><button id="setupSampleBtn" type="button" class="text-teal-700 underline" data-i18n="setup_sample">Explore a sample profile</button></p>
         </div>
         <div class="mt-8 pt-6 border-t border-slate-100 text-sm text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
     </div>
@@ -611,6 +613,7 @@ const I18N = {
         lock_signin: "Sign in / Create account",
         lock_or_passcode: "or unlock with your passcode",
         lock_sample: "Explore a sample profile",
+        lock_signedin_hint: "You're signed in for cloud sync — enter your 4-digit passcode to open this profile.",
         setup_title: "Create your care profile",
         setup_name: "Elderly person's name",
         setup_age: "Age (optional)",
@@ -618,6 +621,7 @@ const I18N = {
         setup_pass_confirm: "Confirm passcode",
         setup_submit: "Create profile",
         setup_signin: "Already have an account? Sign in",
+        setup_sample: "Explore a sample profile",
         footer_advice: "SahayakCare does not replace medical advice.",
         sample_banner: "You're exploring a sample profile with fictional data.",
         add_med: "+ Add medicine", add_appt: "+ Add appointment", add_member: "+ Add member",
@@ -641,6 +645,7 @@ const I18N = {
         lock_signin: "साइन इन करें / खाता बनाएँ",
         lock_or_passcode: "या अपने पासकोड से खोलें",
         lock_sample: "नमूना प्रोफ़ाइल देखें",
+        lock_signedin_hint: "आप क्लाउड सिंक के लिए साइन इन हैं — प्रोफ़ाइल खोलने के लिए अपना 4 अंकों का पासकोड डालें।",
         setup_title: "अपनी देखभाल प्रोफ़ाइल बनाएँ",
         setup_name: "बुज़ुर्ग का नाम",
         setup_age: "उम्र (वैकल्पिक)",
@@ -648,6 +653,7 @@ const I18N = {
         setup_pass_confirm: "पासकोड दोबारा डालें",
         setup_submit: "प्रोफ़ाइल बनाएँ",
         setup_signin: "पहले से खाता है? साइन इन करें",
+        setup_sample: "नमूना प्रोफ़ाइल देखें",
         footer_advice: "SahayakCare चिकित्सा सलाह का विकल्प नहीं है।",
         sample_banner: "आप नमूना प्रोफ़ाइल देख रहे हैं — यह डेटा काल्पनिक है।",
         add_med: "+ दवा जोड़ें", add_appt: "+ अपॉइंटमेंट जोड़ें", add_member: "+ सदस्य जोड़ें",
@@ -664,6 +670,25 @@ const t = k => (I18N[currentLang] && I18N[currentLang][k]) || I18N.en[k] || k;
 let state = { profileName: '', profileAge: null, medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: '', sample: false };
 let currentLang = 'en';
 let dismissedReminders = new Set();
+
+// Dismissed reminders persist across reloads in a SEPARATE localStorage
+// key — never inside `state`, so they are never synced to the cloud as
+// dose data. Keys are date-prefixed (`YYYY-MM-DD|<reminder id>`), so a
+// dismissal expires naturally the next day; stale entries are dropped
+// on load.
+const DISMISSED_KEY = 'sahayakcare_dismissed_v1';
+const dismissKey = id => `${todayStr()}|${id}`;
+function loadDismissed() {
+    try {
+        const raw = localStorage.getItem(DISMISSED_KEY);
+        if (!raw) return;
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) arr.forEach(k => { if (typeof k === 'string' && k.startsWith(todayStr() + '|')) dismissedReminders.add(k); });
+    } catch (e) { localStorage.removeItem(DISMISSED_KEY); }
+}
+function saveDismissed() {
+    try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissedReminders])); } catch (e) {}
+}
 
 function save() {
     localStorage.setItem('sahayakcare_v1', JSON.stringify(state));
@@ -756,6 +781,8 @@ function load() {
 function resetDemo() {
     if (confirm("Reset all data? This clears the care profile on this device.")) {
         localStorage.removeItem('sahayakcare_v1');
+        localStorage.removeItem(DISMISSED_KEY);
+        dismissedReminders.clear();
         api.token = '';
         state = { profileName: '', profileAge: null, medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: '', sample: false };
         showBootScreen();
@@ -792,6 +819,11 @@ function markDose(medId, slot, status) {
     const key = `${todayStr()}|${medId}|${slot}`;
     const prev = state.doseLog[key];
     state.doseLog[key] = status;
+    if (status === 'taken') {
+        // A dose later marked Taken must not stay hidden behind an
+        // earlier dismissal of its reminder.
+        ['miss', 'due'].forEach(p => { if (dismissedReminders.delete(dismissKey(`${p}-${medId}-${slot}`))) saveDismissed(); });
+    }
     if (status === 'taken' && prev !== 'taken') {
         const med = state.medicines.find(m => m.id === medId);
         if (med && med.stock > 0) med.stock--;
@@ -933,7 +965,7 @@ function buildReminders() {
         }
     });
 
-    return list.filter(item => !dismissedReminders.has(item.id));
+    return list.filter(item => !dismissedReminders.has(dismissKey(item.id)));
 }
 
 function renderDashboard() {
@@ -1215,7 +1247,8 @@ function dismissReminder(id) {
             if (!state.doseLog[key]) { state.doseLog[key] = 'missed'; save(); }
         }
     }
-    dismissedReminders.add(id);
+    dismissedReminders.add(dismissKey(id));
+    saveDismissed();
     renderAll();
 }
 
@@ -1347,21 +1380,28 @@ function refreshLockAuthUI() {
     const email = api.emailFromToken();
     $('lockAuthState').style.display = email ? 'block' : 'none';
     $('lockAuthBtn').style.display = email ? 'none' : 'block';
+    // Signed in = the cloud account is connected, but the device
+    // passcode is a separate lock: the profile still needs its
+    // 4-digit passcode to open. Say so, or sign-in looks broken.
+    $('lockSignedInHint').style.display = email ? 'block' : 'none';
     if (email) $('lockAuthEmail').textContent = 'Signed in as ' + email;
 }
 
 $('lockAuthBtn').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
 $('lockSignOutBtn').onclick = () => { api.token = ''; refreshAuthUI(); };
-$('sampleProfileBtn').onclick = () => {
-    // One tap must not silently wipe a real local profile: confirm first.
-    // (The token is still cleared below so fictional data never overwrites
-    // the signed-in user's real cloud profile.)
+// One shared path for both sample entry points (lock screen +
+// setup screen). One tap must not silently wipe a real local profile:
+// confirm first. (The token is still cleared below so fictional data
+// never overwrites the signed-in user's real cloud profile.)
+function loadSampleProfile() {
     if (!confirm('Load the sample profile? This replaces the profile on this device.')) return;
     api.token = '';
     sampleData();
     showBootScreen();
     $('sampleNote').style.display = 'block';
-};
+}
+$('sampleProfileBtn').onclick = loadSampleProfile;
+$('setupSampleBtn').onclick = loadSampleProfile;
 $('setupSignInLink').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
 $('setupSubmit').onclick = () => {
     const name = $('setupName').value.trim();
@@ -1624,6 +1664,7 @@ $('changePassBtn').onclick = openPassModal;
 
 document.addEventListener('DOMContentLoaded', () => {
     load();
+    loadDismissed();
     showBootScreen();
     $('todayDate').textContent = fmtDate(todayStr());
 });
