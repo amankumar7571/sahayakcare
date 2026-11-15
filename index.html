@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SahayakCare — Elderly Care & Medication Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; }
+        body.large-text { font-size: 118%; }
+        body.large-text button, body.large-text input, body.large-text select { font-size: 1.05rem; }
+        .card { background:#fff; border-radius:1rem; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+        .tabbtn { padding: 0.75rem 1rem; font-weight: 500; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .tabbtn.active { background:#0F766E; color:#fff; border-bottom-color: #D97706; }
+        .modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:50; }
+        .modal.hidden { display:none; }
+        input, select, textarea { border:1px solid #d1d5db; border-radius:.6rem; padding:.6rem .8rem; width:100%; }
+        .dose-taken { border-left:6px solid #059669; }
+        .dose-missed { border-left:6px solid #DC2626; }
+        .dose-pending { border-left:6px solid #D97706; }
+        .view { display: none; }
+        .view.active { display: block; }
+    </style>
+</head>
+<body class="bg-[#F7F5F0] text-slate-800">
+
+<div id="lockScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="card p-8 max-w-sm w-full text-center">
+        <div class="text-6xl mb-4">❤️</div>
+        <h1 class="text-2xl font-bold text-[#0F766E]">SahayakCare</h1>
+        <p class="text-slate-500 mb-6">Elderly Care & Medication Management</p>
+        <div class="space-y-4">
+            <p class="text-sm font-medium">This care profile is protected by a passcode.</p>
+            <input type="password" id="passInput" maxlength="4" inputmode="numeric" placeholder="Enter 4-digit passcode" class="text-center text-2xl tracking-widest">
+            <button id="unlockBtn" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Unlock Profile</button>
+            <p id="lockError" class="text-red-600 hidden">Wrong passcode, please try again.</p>
+            <p class="text-xs text-slate-400">Demo passcode: 1234</p>
+        </div>
+        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-400 uppercase tracking-wider">
+            Demo data — fictional people, not medical advice.
+        </div>
+    </div>
+</div>
+
+<div id="app" class="hidden min-h-screen flex flex-col">
+    <header class="bg-[#0F766E] text-white p-4 shadow-md">
+        <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">❤️</span>
+                <div>
+                    <h1 class="font-bold leading-none">SahayakCare</h1>
+                    <span class="text-xs opacity-80">Elderly Care & Medication Management</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full">
+                    <div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center font-bold text-sm">SD</div>
+                    <span class="text-sm font-medium hidden sm:inline">Shanti Devi, 74 yrs</span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="langToggle" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">हिन्दी</button>
+                    <button id="textToggle" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">A+ Large text</button>
+                    <button id="lockBtn" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">🔒 Lock</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="sticky top-0 bg-white border-b border-slate-200 z-40 overflow-x-auto">
+        <div class="max-w-5xl mx-auto flex whitespace-nowrap">
+            <button class="tabbtn active" data-tab="dashboard" data-i18n="nav_dashboard">🏠 Dashboard</button>
+            <button class="tabbtn" data-tab="medicines" data-i18n="nav_medicines">💊 Medicines</button>
+            <button class="tabbtn" data-tab="appointments" data-i18n="nav_appointments">📅 Appointments</button>
+            <button class="tabbtn" data-tab="circle" data-i18n="nav_circle">👨‍👩‍👧 Care Circle</button>
+            <button class="tabbtn" data-tab="vitals" data-i18n="nav_vitals">🩺 Vitals</button>
+            <button class="tabbtn" data-tab="reminders" data-i18n="nav_reminders">🔔 Reminders</button>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto p-4 w-full flex-grow">
+        <section id="view-dashboard" class="view active space-y-6">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-2">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800" data-i18n="dash_title">Good day, Shanti Devi 🙏</h2>
+                    <p id="todayDate" class="text-slate-500"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="card p-4 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-2xl">💊</div>
+                    <div>
+                        <div id="statMeds" class="text-2xl font-bold text-teal-800">–</div>
+                        <div class="text-sm text-slate-500">Medicines today</div>
+                    </div>
+                </div>
+                <div class="card p-4 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-2xl">📅</div>
+                    <div>
+                        <div id="statAppts" class="text-2xl font-bold text-amber-800">–</div>
+                        <div class="text-sm text-slate-500">Upcoming appointments</div>
+                    </div>
+                </div>
+                <div class="card p-4 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl">🔥</div>
+                    <div>
+                        <div id="statStreak" class="text-2xl font-bold text-blue-800">–</div>
+                        <div class="text-sm text-slate-500">Day adherence streak</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2" data-i18n="adh_title">
+                        <span>📊</span> Medication adherence — last 7 days
+                    </h3>
+                    <div class="flex flex-col items-center justify-center py-4">
+                        <div id="adherenceRing" class="relative w-32 h-32 flex items-center justify-center">
+                            <!-- SVG Ring will be injected by JS -->
+                            <div id="adherencePct" class="text-4xl font-bold text-[#0F766E]">–</div>
+                        </div>
+                        <p id="adherenceNote" class="mt-4 text-sm text-slate-600 text-center"></p>
+                    </div>
+                </div>
+
+                <div class="card p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2" data-i18n="today_title">
+                        <span>⏰</span> Today's medicines
+                    </h3>
+                    <div id="todayDoses" class="space-y-3">
+                        <!-- JS fills dose rows -->
+                        <div class="animate-pulse flex space-x-4">
+                            <div class="flex-1 space-y-4 py-1">
+                                <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                                <div class="h-4 bg-slate-200 rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2" data-i18n="next_title">
+                        <span>👨‍⚕️</span> Next appointment
+                    </h3>
+                    <div id="nextAppt">
+                        <p class="text-slate-400 italic">Loading appointment details...</p>
+                    </div>
+                </div>
+
+                <div class="card p-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2" data-i18n="rem_title">
+                        <span>⚠️</span> Needs attention
+                    </h3>
+                    <div id="reminderPreview" class="space-y-3">
+                        <p class="text-slate-400 italic">Checking reminders...</p>
+                    </div>
+                </div>
+            </div>
+        </section><section id="view-medicines" class="view hidden">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800" data-i18n="meds_title">💊 Medicines</h2>
+        <button id="addMedBtn" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm">+ Add medicine</button>
+    </div>
+    <div id="medList" class="space-y-4"></div>
+    <p id="stockNote" class="mt-6 text-sm text-gray-500 italic text-center"></p>
+</section>
+
+<div id="medModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="card p-6 w-full max-w-md bg-white rounded-xl shadow-xl">
+        <h3 id="medModalTitle" class="text-xl font-bold mb-4 text-gray-800">Add medicine</h3>
+        <input type="hidden" id="medEditId">
+        <div class="space-y-4">
+            <div>
+                <label for="medName" class="block text-sm font-medium text-gray-700">Medicine name</label>
+                <input type="text" id="medName" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Paracetamol">
+            </div>
+            <div>
+                <label for="medDose" class="block text-sm font-medium text-gray-700">Dose (e.g. 500 mg)</label>
+                <input type="text" id="medDose" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. 1 tablet">
+            </div>
+            <div>
+                <span class="block text-sm font-medium text-gray-700 mb-2">Time of day</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-teal-50">
+                        <input type="checkbox" name="medTime" value="morning" class="w-5 h-5 text-teal-600 rounded">
+                        <span class="text-sm">Morning</span>
+                    </label>
+                    <label class="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-teal-50">
+                        <input type="checkbox" name="medTime" value="afternoon" class="w-5 h-5 text-teal-600 rounded">
+                        <span class="text-sm">Afternoon</span>
+                    </label>
+                    <label class="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-teal-50">
+                        <input type="checkbox" name="medTime" value="evening" class="w-5 h-5 text-teal-600 rounded">
+                        <span class="text-sm">Evening</span>
+                    </label>
+                    <label class="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-teal-50">
+                        <input type="checkbox" name="medTime" value="night" class="w-5 h-5 text-teal-600 rounded">
+                        <span class="text-sm">Night</span>
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label for="medPurpose" class="block text-sm font-medium text-gray-700">Purpose (e.g. Diabetes)</label>
+                <input type="text" id="medPurpose" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none">
+            </div>
+            <div>
+                <label for="medStock" class="block text-sm font-medium text-gray-700">Tablets left</label>
+                <input type="number" id="medStock" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none">
+            </div>
+            <div>
+                <label for="medNotes" class="block text-sm font-medium text-gray-700">Notes</label>
+                <textarea id="medNotes" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none" rows="2"></textarea>
+            </div>
+            <div class="flex space-x-3 pt-4">
+                <button id="medSave" class="flex-1 bg-teal-600 text-white py-3 rounded-lg font-bold hover:bg-teal-700 transition-colors">Save medicine</button>
+                <button id="medCancel" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-bold hover:bg-gray-300 transition-colors">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section id="view-appointments" class="view hidden">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800" data-i18n="appts_title">📅 Doctor appointments</h2>
+        <button id="addApptBtn" class="bg-teal-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm">+ Add appointment</button>
+    </div>
+    <div id="apptList" class="space-y-4"></div>
+</section>
+
+<div id="apptModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="card p-6 w-full max-w-md bg-white rounded-xl shadow-xl">
+        <h3 id="apptModalTitle" class="text-xl font-bold mb-4 text-gray-800">Add appointment</h3>
+        <input type="hidden" id="apptEditId">
+        <div class="space-y-4">
+            <div>
+                <label for="apptDoctor" class="block text-sm font-medium text-gray-700">Doctor name</label>
+                <input type="text" id="apptDoctor" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none">
+            </div>
+            <div>
+                <label for="apptSpecialty" class="block text-sm font-medium text-gray-700">Specialty</label>
+                <input type="text" id="apptSpecialty" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="e.g. Cardiologist">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="apptDate" class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="apptDate" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                </div>
+                <div>
+                    <label for="apptTime" class="block text-sm font-medium text-gray-700">Time</label>
+                    <input type="time" id="apptTime" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                </div>
+            </div>
+            <div>
+                <label for="apptPlace" class="block text-sm font-medium text-gray-700">Clinic / Hospital</label>
+                <input type="text" id="apptPlace" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none">
+            </div>
+            <div>
+                <label for="apptNotes" class="block text-sm font-medium text-gray-700">Notes</label>
+                <textarea id="apptNotes" class="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-teal-500 outline-none" rows="2"></textarea>
+            </div>
+            <div class="flex space-x-3 pt-4">
+                <button id="apptSave" class="flex-1 bg-teal-600 text-white py-3 rounded-lg font-bold hover:bg-teal-700 transition-colors">Save appointment</button>
+                <button id="apptCancel" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-bold hover:bg-gray-300 transition-colors">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div><section id="view-circle" class="view hidden">
+    <h2 data-i18n="circle_title" class="text-2xl font-bold mb-4">👨‍👩‍👧 Care Circle</h2>
+    <p class="mb-4 text-slate-600">Family and caretakers who share this care profile. Everyone here can view medicines and appointments.</p>
+    <button id="addMemberBtn" class="bg-teal-600 text-white px-4 py-2 rounded-lg mb-6 hover:bg-teal-700 transition-colors">+ Add member</button>
+    <div id="circleList" class="space-y-4"></div>
+
+    <div id="memberModal" class="modal hidden">
+        <div class="card p-6 w-full max-w-md">
+            <h3 id="memberModalTitle" class="text-xl font-bold mb-4">Add member</h3>
+            <input type="hidden" id="memberEditId">
+            <div class="space-y-4">
+                <div>
+                    <label for="memberName" class="block text-sm font-medium text-slate-700">Name</label>
+                    <input type="text" id="memberName" class="w-full border rounded-lg p-2 mt-1">
+                </div>
+                <div>
+                    <label for="memberRole" class="block text-sm font-medium text-slate-700">Role</label>
+                    <select id="memberRole" class="w-full border rounded-lg p-2 mt-1">
+                        <option value="Primary caretaker">Primary caretaker</option>
+                        <option value="Family">Family</option>
+                        <option value="Doctor">Doctor</option>
+                        <option value="Pharmacist">Pharmacist</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="memberPhone" class="block text-sm font-medium text-slate-700">Phone</label>
+                    <input type="tel" id="memberPhone" class="w-full border rounded-lg p-2 mt-1">
+                </div>
+                <div>
+                    <label for="memberEmail" class="block text-sm font-medium text-slate-700">Email</label>
+                    <input type="email" id="memberEmail" class="w-full border rounded-lg p-2 mt-1">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button id="memberSave" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-semibold">Save member</button>
+                    <button id="memberCancel" class="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-semibold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="view-vitals" class="view hidden">
+    <h2 data-i18n="vitals_title" class="text-2xl font-bold mb-4">🩺 Health vitals</h2>
+    <div id="vitalLatest" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6"></div>
+    <div class="card p-6 mb-6">
+        <h3 class="text-lg font-bold mb-4">Log a reading</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="vitalType" class="block text-sm font-medium text-slate-700">Vital Type</label>
+                <select id="vitalType" class="w-full border rounded-lg p-2 mt-1">
+                    <option value="Blood Pressure">Blood Pressure</option>
+                    <option value="Blood Sugar">Blood Sugar</option>
+                    <option value="Weight">Weight</option>
+                    <option value="Pulse">Pulse</option>
+                </select>
+            </div>
+            <div>
+                <label for="vitalValue" class="block text-sm font-medium text-slate-700">Reading</label>
+                <input type="text" id="vitalValue" placeholder="e.g. 120/80 or 110 or 68" class="w-full border rounded-lg p-2 mt-1">
+            </div>
+            <div class="md:col-span-2">
+                <label for="vitalNote" class="block text-sm font-medium text-slate-700">Note (optional)</label>
+                <input type="text" id="vitalNote" placeholder="Note (optional)" class="w-full border rounded-lg p-2 mt-1">
+            </div>
+        </div>
+        <button id="vitalAdd" class="mt-4 w-full bg-teal-600 text-white py-2 rounded-lg font-semibold hover:bg-teal-700 transition-colors">Save reading</button>
+    </div>
+    <div id="vitalHistory" class="space-y-2"></div>
+</section>
+
+<section id="view-reminders" class="view hidden">
+    <h2 data-i18n="reminders_title" class="text-2xl font-bold mb-4">🔔 Reminders</h2>
+    <p class="mb-4 text-slate-600">Missed doses, upcoming doses and appointments. Email reminders open in your mail app, addressed to the primary caretaker.</p>
+    <div id="reminderList" class="space-y-4"></div>
+</section>
+
+<footer class="text-center text-sm text-slate-500 mt-8 pb-12">
+    <p>SahayakCare — demo prototype built for Catalyst Solo AI Hackathon by Aman Kumar. Demo data with fictional people — not medical advice.</p>
+    <button id="resetDemo" class="mt-4 text-teal-600 font-medium hover:underline">Reset demo data</button>
+</footer>
+</main>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const localISO = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const todayStr = () => localISO(new Date());
+const datePlus = n => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return localISO(d);
+};
+const fmtDate = iso => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+};
+const slotLabel = s => {
+    const labels = {
+        morning: "🌅 Morning 8:00 AM",
+        afternoon: "☀️ Afternoon 1:00 PM",
+        evening: "🌇 Evening 6:00 PM",
+        night: "🌙 Night 9:00 PM"
+    };
+    return labels[s] || s;
+};
+const SLOT_HOURS = { morning: 8, afternoon: 13, evening: 18, night: 21 };
+
+const I18N = {
+    en: {
+        nav_dashboard: "🏠 Dashboard", nav_medicines: "💊 Medicines", nav_appointments: "📅 Appointments",
+        nav_circle: "👨‍👩‍👧 Care Circle", nav_vitals: "🩺 Vitals", nav_reminders: "🔔 Reminders",
+        dash_title: "Good day, Shanti Devi 🙏", adh_title: "Medication adherence — last 7 days",
+        today_title: "Today's medicines", next_title: "Next appointment", rem_title: "Needs attention",
+        meds_title: "💊 Medicines", appts_title: "📅 Doctor appointments", circle_title: "👨‍👩‍👧 Care Circle",
+        vitals_title: "🩺 Health vitals", reminders_title: "🔔 Reminders"
+    },
+    hi: {
+        nav_dashboard: "🏠 डैशबोर्ड", nav_medicines: "💊 दवाइयाँ", nav_appointments: "📅 अपॉइंटमेंट",
+        nav_circle: "👨‍👩‍👧 देखभाल समूह", nav_vitals: "🩺 स्वास्थ्य", nav_reminders: "🔔 अनुस्मारक",
+        dash_title: "नमस्ते, शांति देवी 🙏", adh_title: "दवा पालन — पिछले 7 दिन",
+        today_title: "आज की दवाइयाँ", next_title: "अगला अपॉइंटमेंट", rem_title: "ध्यान देने योग्य",
+        meds_title: "💊 दवाइयाँ", appts_title: "📅 डॉक्टर अपॉइंटमेंट", circle_title: "👨‍👩‍👧 देखभाल समूह",
+        vitals_title: "🩺 स्वास्थ्य", reminders_title: "🔔 अनुस्मारक"
+    }
+};
+
+let state = { medicines: [], appointments: [], circle: [], vitals: [], doseLog: {} };
+let currentLang = 'en';
+let dismissedReminders = new Set();
+
+function save() {
+    localStorage.setItem('sahayakcare_v1', JSON.stringify(state));
+}
+
+function seedData() {
+    state.medicines = [
+        { id: 'm1', name: 'Metformin', dose: '500 mg', times: ['morning', 'night'], purpose: 'Diabetes', stock: 18, notes: 'Take with food' },
+        { id: 'm2', name: 'Amlodipine', dose: '5 mg', times: ['morning'], purpose: 'Blood pressure', stock: 9, notes: '' },
+        { id: 'm3', name: 'Atorvastatin', dose: '10 mg', times: ['night'], purpose: 'Cholesterol', stock: 24, notes: 'Take at bedtime' },
+        { id: 'm4', name: 'Vitamin D3', dose: '1000 IU', times: ['morning'], purpose: 'Bone health', stock: 6, notes: 'Once daily' }
+    ];
+    state.appointments = [
+        { id: 'a1', doctor: 'Dr. Ananya Sharma', specialty: 'Cardiology', date: datePlus(3), time: '10:30', place: 'City Heart Clinic', notes: 'ECG review' },
+        { id: 'a2', doctor: 'Dr. Rohan Verma', specialty: 'General Physician', date: datePlus(7), time: '11:00', place: 'Sharma Clinic', notes: 'Sugar test reports' },
+        { id: 'a3', doctor: 'Dr. Ananya Sharma', specialty: 'Cardiology', date: datePlus(-10), time: '10:00', place: 'City Heart Clinic', notes: 'Done — dose adjusted' }
+    ];
+    state.circle = [
+        { id: 'c1', name: 'Meera Sharma', role: 'Primary caretaker', phone: '+91 98110 12345', email: 'meera.sharma@example.com' },
+        { id: 'c2', name: 'Rahul Sharma', role: 'Family', phone: '+91 98110 67890', email: 'rahul.sharma@example.com' },
+        { id: 'c3', name: 'Dr. Ananya Sharma', role: 'Doctor', phone: '+91 98110 11111', email: 'ananya.sharma@example.com' }
+    ];
+    state.vitals = [
+        { id: 'v1', type: 'Blood Pressure', value: '128/82', date: datePlus(-2), note: 'Morning' },
+        { id: 'v2', type: 'Blood Sugar', value: '112', date: datePlus(-1), note: 'Fasting' },
+        { id: 'v3', type: 'Blood Pressure', value: '132/84', date: datePlus(-5), note: 'Evening' },
+        { id: 'v4', type: 'Weight', value: '68', date: datePlus(-6), note: '' }
+    ];
+
+    for (let i = 1; i <= 6; i++) {
+        const d = datePlus(-i);
+        state.medicines.forEach(m => {
+            m.times.forEach(slot => {
+                let status = 'taken';
+                if (m.id === 'm2' && slot === 'morning' && i === 3) status = 'missed';
+                if (m.id === 'm1' && slot === 'night' && i === 5) status = 'missed';
+                state.doseLog[`${d}|${m.id}|${slot}`] = status;
+            });
+        });
+    }
+    save();
+}
+
+function load() {
+    const data = localStorage.getItem('sahayakcare_v1');
+    if (data) state = JSON.parse(data);
+    else seedData();
+}
+
+function resetDemo() {
+    if (confirm("Reset all data to demo state?")) {
+        localStorage.removeItem('sahayakcare_v1');
+        load();
+        renderAll();
+    }
+}
+
+function toggleLang() {
+    currentLang = currentLang === 'en' ? 'hi' : 'en';
+    $('langToggle').textContent = currentLang === 'en' ? 'हिन्दी' : 'English';
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (I18N[currentLang][key]) el.textContent = I18N[currentLang][key];
+    });
+    renderAll();
+}
+
+function toggleText() {
+    document.body.classList.toggle('large-text');
+    $('textToggle').textContent = document.body.classList.contains('large-text') ? 'A Normal text' : 'A+ Large text';
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    $(`view-${tab}`).classList.add('active');
+    renderAll();
+}
+
+function markDose(medId, slot, status) {
+    state.doseLog[`${todayStr()}|${medId}|${slot}`] = status;
+    if (status === 'taken') {
+        const med = state.medicines.find(m => m.id === medId);
+        if (med && med.stock > 0) med.stock--;
+    }
+    save();
+    renderAll();
+}
+
+function getAdherence() {
+    let total = 0, taken = 0, missed = 0;
+    for (let i = 0; i < 7; i++) {
+        const d = datePlus(-i);
+        state.medicines.forEach(m => {
+            m.times.forEach(slot => {
+                total++;
+                const res = state.doseLog[`${d}|${m.id}|${slot}`];
+                if (res === 'taken') taken++;
+                else if (res === 'missed') missed++;
+            });
+        });
+    }
+    const pct = total ? Math.round((taken / (taken + missed || total)) * 100) : 100;
+    return { pct, taken, total: taken + missed };
+}
+
+function getStreak() {
+    let streak = 0;
+    let dayOffset = 0;
+    
+    const isDayComplete = (offset) => {
+        const d = datePlus(offset);
+        const dayMeds = state.medicines.filter(m => m.times.length > 0);
+        if (dayMeds.length === 0) return false;
+        for (const m of dayMeds) {
+            for (const slot of m.times) {
+                const status = state.doseLog[`${d}|${m.id}|${slot}`];
+                if (status !== 'taken') return false;
+            }
+        }
+        return true;
+    };
+
+    if (isDayComplete(0)) {
+        streak = 1;
+        dayOffset = -1;
+    } else {
+        dayOffset = -1;
+    }
+
+    while (isDayComplete(dayOffset)) {
+        streak++;
+        dayOffset--;
+        if (streak > 365) break;
+    }
+    return streak;
+}
+
+function buildReminders() {
+    const list = [];
+    const now = new Date();
+    const hr = now.getHours();
+    const primary = state.circle.find(c => c.role.toLowerCase().includes('caretaker')) || state.circle[0];
+    const email = primary ? primary.email : '';
+
+    state.medicines.forEach(m => {
+        m.times.forEach(slot => {
+            const status = state.doseLog[`${todayStr()}|${m.id}|${slot}`];
+            const slotHr = SLOT_HOURS[slot];
+            if (!status && hr > slotHr) {
+                list.push({
+                    id: `miss-${m.id}-${slot}`,
+                    icon: '💊',
+                    text: `Missed: ${m.name} ${m.dose} (${slotLabel(slot)})`,
+                    mailto: `mailto:${email}?subject=SahayakCare reminder: missed dose&body=Shanti Devi missed her ${m.name} (${slot}) dose. Please check in.`
+                });
+            } else if (!status && slotHr - hr <= 2 && slotHr - hr > 0) {
+                list.push({
+                    id: `due-${m.id}-${slot}`,
+                    icon: '⏰',
+                    text: `Due soon: ${m.name} ${m.dose} (${slotLabel(slot)})`,
+                    mailto: `mailto:${email}?subject=SahayakCare: dose due soon&body=Shanti Devi has a dose of ${m.name} due at ${slotLabel(slot)}.`
+                });
+            }
+        });
+        if (m.stock <= 5) {
+            list.push({
+                id: `stock-${m.id}`,
+                icon: '⚠️',
+                text: `Low stock: ${m.name} (${m.stock} left)`,
+                mailto: `mailto:${email}?subject=SahayakCare: Refill needed&body=The stock for ${m.name} is low (${m.stock} remaining).`
+            });
+        }
+    });
+
+    state.appointments.forEach(a => {
+        const diff = (new Date(a.date) - new Date(todayStr())) / (1000 * 60 * 60 * 24);
+        if (diff >= 0 && diff <= 2) {
+            list.push({
+                id: `appt-${a.id}`,
+                icon: '📅',
+                text: `Appointment in ${Math.ceil(diff)} day(s): ${a.doctor} at ${a.time}`,
+                mailto: `mailto:${email}?subject=SahayakCare: Upcoming appointment&body=Reminder: Appointment with ${a.doctor} on ${fmtDate(a.date)} at ${a.time} (${a.place}).`
+            });
+        }
+    });
+
+    return list.filter(item => !dismissedReminders.has(item.id));
+}
+
+function renderDashboard() {
+    $('todayDate').textContent = fmtDate(todayStr());
+    $('statMeds').textContent = state.medicines.length;
+    $('statAppts').textContent = state.appointments.filter(a => a.date >= todayStr()).length;
+    $('statStreak').textContent = getStreak();
+
+    const adh = getAdherence();
+    $('adherencePct').textContent = adh.pct + "%";
+    $('adherenceNote').textContent = `${adh.taken} of ${adh.total} doses taken in the last 7 days`;
+    const offset = 339 - (adh.pct / 100) * 339;
+    $('adherenceRing').innerHTML = `
+        <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" stroke-width="10" />
+            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--primary)" stroke-width="10" 
+                stroke-dasharray="339" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 60 60)" />
+            <text x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="24" font-weight="bold" fill="var(--primary)">${adh.pct}%</text>
+        </svg>
+    `;
+
+    let dosesHtml = '';
+    state.medicines.forEach(m => {
+        m.times.forEach(slot => {
+            const status = state.doseLog[`${todayStr()}|${m.id}|${slot}`] || 'pending';
+            dosesHtml += `
+                <div class="dose-row">
+                    <div>
+                        <div style="font-weight:600">${m.name} <span style="font-weight:400;color:var(--text-light)">${m.dose}</span></div>
+                        <div style="font-size:0.85rem;color:var(--text-light)">${slotLabel(slot)}</div>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center">
+                        <span class="dose-status dose-${status}">${status.toUpperCase()}</span>
+                        ${status === 'pending' ? `
+                            <button class="btn btn-primary" style="padding:0.3rem 0.6rem; font-size:0.8rem" onclick="markDose('${m.id}','${slot}','taken')">✓ Taken</button>
+                            <button class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.8rem" onclick="markDose('${m.id}','${slot}','missed')">✗ Missed</button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    });
+    $('todayDoses').innerHTML = dosesHtml || '<p>No medicines scheduled for today.</p>';
+
+    const upcoming = state.appointments.filter(a => a.date >= todayStr()).sort((a, b) => a.date.localeCompare(b.date));
+    if (upcoming.length > 0) {
+        const a = upcoming[0];
+        $('nextAppt').innerHTML = `
+            <div style="font-weight:600; font-size:1.1rem">${a.doctor}</div>
+            <div style="color:var(--primary); font-weight:500">${a.specialty}</div>
+            <div style="margin-top:0.5rem">📅 ${fmtDate(a.date)} at ${a.time}</div>
+            <div style="font-size:0.9rem; color:var(--text-light)">📍 ${a.place}</div>
+        `;
+    } else {
+        $('nextAppt').textContent = "No upcoming appointments.";
+    }
+
+    const rems = buildReminders().slice(0, 3);
+    $('reminderPreview').innerHTML = rems.map(r => `<div style="margin-bottom:0.5rem">${r.icon} ${r.text}</div>`).join('') || 'All clear! 🎉';
+}
+
+function renderMeds() {
+    $('medList').innerHTML = state.medicines.map(m => `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:start">
+                <div>
+                    <h3 style="margin:0">${m.name}</h3>
+                    <div style="color:var(--primary); font-weight:600">${m.dose}</div>
+                </div>
+                <div style="text-align:right">
+                    <button class="btn btn-secondary" onclick="editMed('${m.id}')">Edit</button>
+                    <button class="btn btn-secondary" style="color:var(--danger)" onclick="deleteMed('${m.id}')">Delete</button>
+                </div>
+            </div>
+            <p style="margin:0.5rem 0"><strong>Purpose:</strong> ${m.purpose}</p>
+            <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin:0.5rem 0">
+                ${m.times.map(t => `<span class="chip">${slotLabel(t)}</span>`).join('')}
+            </div>
+            <div style="font-size:0.9rem; color:var(--text-light)">
+                Stock: ${m.stock} units ${m.stock <= 10 ? '<span style="color:var(--danger);font-weight:600">⚠️ Low stock</span>' : ''}
+            </div>
+            ${m.notes ? `<div style="margin-top:0.5rem; font-style:italic; font-size:0.9rem">"${m.notes}"</div>` : ''}
+        </div>
+    `).join('');
+}
+
+function editMed(id) {
+    const m = state.medicines.find(x => x.id === id);
+    $('medModalTitle').textContent = "Edit Medicine";
+    $('medEditId').value = m.id;
+    $('medName').value = m.name;
+    $('medDose').value = m.dose;
+    $('medPurpose').value = m.purpose;
+    $('medStock').value = m.stock;
+    $('medNotes').value = m.notes;
+    document.querySelectorAll('#medTimeCheckboxes input').forEach(cb => {
+        cb.checked = m.times.includes(cb.value);
+    });
+    $('medModal').style.display = 'flex';
+}
+
+function deleteMed(id) {
+    if (confirm("Remove this medicine?")) {
+        state.medicines = state.medicines.filter(m => m.id !== id);
+        save();
+        renderAll();
+    }
+}
+
+function renderAppts() {
+    const sorted = [...state.appointments].sort((a, b) => b.date.localeCompare(a.date));
+    $('apptList').innerHTML = sorted.map(a => {
+        const isPast = a.date < todayStr();
+        return `
+            <div class="card" style="${isPast ? 'opacity:0.7; background:#f8fafc' : ''}">
+                <div style="display:flex; justify-content:space-between; align-items:start">
+                    <div>
+                        <h3 style="margin:0">${a.doctor} ${isPast ? '<span class="chip">Done</span>' : ''}</h3>
+                        <div style="color:var(--primary); font-weight:600">${a.specialty}</div>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" onclick="editAppt('${a.id}')">Edit</button>
+                        <button class="btn btn-secondary" style="color:var(--danger)" onclick="deleteAppt('${a.id}')">Delete</button>
+                    </div>
+                </div>
+                <div style="margin-top:0.5rem">
+                    <strong>📅 ${fmtDate(a.date)}</strong> at ${a.time}
+                </div>
+                <div style="font-size:0.9rem">📍 ${a.place}</div>
+                ${a.notes ? `<div style="margin-top:0.5rem; font-size:0.9rem; color:var(--text-light)">Note: ${a.notes}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function editAppt(id) {
+    const a = state.appointments.find(x => x.id === id);
+    $('apptModalTitle').textContent = "Edit Appointment";
+    $('apptEditId').value = a.id;
+    $('apptDoctor').value = a.doctor;
+    $('apptSpecialty').value = a.specialty;
+    $('apptDate').value = a.date;
+    $('apptTime').value = a.time;
+    $('apptPlace').value = a.place;
+    $('apptNotes').value = a.notes;
+    $('apptModal').style.display = 'flex';
+}
+
+function deleteAppt(id) {
+    if (confirm("Delete this appointment?")) {
+        state.appointments = state.appointments.filter(a => a.id !== id);
+        save();
+        renderAll();
+    }
+}
+
+function renderCircle() {
+    $('circleList').innerHTML = state.circle.map(c => {
+        const initials = c.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        const isPrimary = c.role.toLowerCase().includes('caretaker');
+        return `
+            <div class="card" style="display:flex; gap:1rem; align-items:center">
+                <div class="avatar">${initials}</div>
+                <div style="flex:1">
+                    <h3 style="margin:0">${c.name}</h3>
+                    <span class="chip" style="${isPrimary ? 'background:var(--primary); color:white' : ''}">${c.role}</span>
+                    <div style="margin-top:0.4rem; font-size:0.9rem">
+                        <a href="tel:${c.phone}" style="text-decoration:none; color:var(--primary)">📞 ${c.phone}</a><br>
+                        <a href="mailto:${c.email}" style="text-decoration:none; color:var(--primary)">✉️ ${c.email}</a>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="editMember('${c.id}')">Edit</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function editMember(id) {
+    const c = state.circle.find(x => x.id === id);
+    $('memberModalTitle').textContent = "Edit Member";
+    $('memberEditId').value = c.id;
+    $('memberName').value = c.name;
+    $('memberRole').value = c.role;
+    $('memberPhone').value = c.phone;
+    $('memberEmail').value = c.email;
+    $('memberModal').style.display = 'flex';
+}
+
+function renderVitals() {
+    const types = [...new Set(state.vitals.map(v => v.type))];
+    $('vitalLatest').innerHTML = types.map(t => {
+        const latest = state.vitals.filter(v => v.type === t).sort((a, b) => b.date.localeCompare(a.date))[0];
+        return `
+            <div class="card" style="text-align:center">
+                <div style="color:var(--text-light); font-size:0.9rem">${latest.type}</div>
+                <div style="font-size:1.5rem; font-weight:bold; color:var(--primary); margin:0.3rem 0">${latest.value}</div>
+                <div style="font-size:0.8rem; color:var(--text-light)">${fmtDate(latest.date)}</div>
+            </div>
+        `;
+    }).join('');
+
+    const history = [...state.vitals].sort((a, b) => b.date.localeCompare(a.date));
+    $('vitalHistory').innerHTML = history.map(v => `
+        <tr>
+            <td>${fmtDate(v.date)}</td>
+            <td>${v.type}</td>
+            <td><strong>${v.value}</strong></td>
+            <td>${v.note}</td>
+        </tr>
+    `).join('');
+}
+
+function renderReminders() {
+    const list = buildReminders();
+    if (list.length === 0) {
+        $('reminderList').innerHTML = '<div class="card" style="text-align:center; padding:2rem">All clear — nothing needs attention right now. 🎉</div>';
+        return;
+    }
+    $('reminderList').innerHTML = list.map(r => `
+        <div class="card" style="border-left: 5px solid var(--primary)">
+            <div style="display:flex; gap:1rem; align-items:start">
+                <div style="font-size:1.5rem">${r.icon}</div>
+                <div style="flex:1">
+                    <div style="font-weight:600; margin-bottom:0.5rem">${r.text}</div>
+                    <div style="display:flex; gap:0.5rem">
+                        <a href="${r.mailto}" class="btn btn-primary" style="text-decoration:none; font-size:0.85rem">✉️ Send email reminder</a>
+                        <button class="btn btn-secondary" style="font-size:0.85rem" onclick="dismissReminder('${r.id}')">Dismiss</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function dismissReminder(id) {
+    dismissedReminders.add(id);
+    renderAll();
+}
+
+function renderAll() {
+    renderDashboard();
+    renderMeds();
+    renderAppts();
+    renderCircle();
+    renderVitals();
+    renderReminders();
+}
+
+$('unlockBtn').onclick = () => {
+    if ($('passInput').value === "1234") {
+        $('lockScreen').style.display = 'none';
+        $('app').style.display = 'block';
+        renderAll();
+    } else {
+        $('lockError').style.display = 'block';
+    }
+};
+
+$('passInput').onkeypress = (e) => { if (e.key === 'Enter') $('unlockBtn').click(); };
+
+$('lockBtn').onclick = () => {
+    $('app').style.display = 'none';
+    $('lockScreen').style.display = 'flex';
+    $('passInput').value = '';
+    $('lockError').style.display = 'none';
+};
+
+document.querySelectorAll('.tabbtn').forEach(btn => {
+    btn.onclick = () => switchTab(btn.getAttribute('data-tab'));
+});
+
+$('addMedBtn').onclick = () => {
+    $('medModalTitle').textContent = "Add Medicine";
+    $('medEditId').value = '';
+    $('medName').value = '';
+    $('medDose').value = '';
+    $('medPurpose').value = '';
+    $('medStock').value = '30';
+    $('medNotes').value = '';
+    document.querySelectorAll('#medTimeCheckboxes input').forEach(cb => cb.checked = false);
+    $('medModal').style.display = 'flex';
+};
+
+$('medSave').onclick = () => {
+    const name = $('medName').value.trim();
+    const dose = $('medDose').value.trim();
+    if (!name || !dose) return alert("Name and Dose are required");
+    
+    const times = [];
+    document.querySelectorAll('#medTimeCheckboxes input:checked').forEach(cb => times.push(cb.value));
+    
+    const id = $('medEditId').value;
+    const medData = {
+        id: id || 'm' + Date.now(),
+        name, dose, times,
+        purpose: $('medPurpose').value,
+        stock: parseInt($('medStock').value) || 0,
+        notes: $('medNotes').value
+    };
+
+    if (id) {
+        const idx = state.medicines.findIndex(m => m.id === id);
+        state.medicines[idx] = medData;
+    } else {
+        state.medicines.push(medData);
+    }
+    save();
+    $('medModal').style.display = 'none';
+    renderAll();
+};
+
+$('addApptBtn').onclick = () => {
+    $('apptModalTitle').textContent = "Add Appointment";
+    $('apptEditId').value = '';
+    $('apptDoctor').value = '';
+    $('apptSpecialty').value = '';
+    $('apptDate').value = todayStr();
+    $('apptTime').value = '10:00';
+    $('apptPlace').value = '';
+    $('apptNotes').value = '';
+    $('apptModal').style.display = 'flex';
+};
+
+$('apptSave').onclick = () => {
+    const doctor = $('apptDoctor').value.trim();
+    const date = $('apptDate').value;
+    if (!doctor || !date) return alert("Doctor and Date are required");
+
+    const id = $('apptEditId').value;
+    const apptData = {
+        id: id || 'a' + Date.now(),
+        doctor, date,
+        specialty: $('apptSpecialty').value,
+        time: $('apptTime').value,
+        place: $('apptPlace').value,
+        notes: $('apptNotes').value
+    };
+
+    if (id) {
+        const idx = state.appointments.findIndex(a => a.id === id);
+        state.appointments[idx] = apptData;
+    } else {
+        state.appointments.push(apptData);
+    }
+    save();
+    $('apptModal').style.display = 'none';
+    renderAll();
+};
+
+$('addMemberBtn').onclick = () => {
+    $('memberModalTitle').textContent = "Add Member";
+    $('memberEditId').value = '';
+    $('memberName').value = '';
+    $('memberRole').value = '';
+    $('memberPhone').value = '';
+    $('memberEmail').value = '';
+    $('memberModal').style.display = 'flex';
+};
+
+$('memberSave').onclick = () => {
+    const name = $('memberName').value.trim();
+    if (!name) return alert("Name is required");
+
+    const id = $('memberEditId').value;
+    const memberData = {
+        id: id || 'c' + Date.now(),
+        name,
+        role: $('memberRole').value,
+        phone: $('memberPhone').value,
+        email: $('memberEmail').value
+    };
+
+    if (id) {
+        const idx = state.circle.findIndex(c => c.id === id);
+        state.circle[idx] = memberData;
+    } else {
+        state.circle.push(memberData);
+    }
+    save();
+    $('memberModal').style.display = 'none';
+    renderAll();
+};
+
+$('vitalAdd').onclick = () => {
+    const val = $('vitalValue').value.trim();
+    if (!val) return;
+    state.vitals.push({
+        id: 'v' + Date.now(),
+        type: $('vitalType').value,
+        value: val,
+        note: $('vitalNote').value,
+        date: todayStr()
+    });
+    save();
+    $('vitalValue').value = '';
+    $('vitalNote').value = '';
+    renderAll();
+};
+
+[medModal, apptModal, memberModal].forEach(m => {
+    m.onclick = (e) => { if (e.target === m) m.style.display = 'none'; };
+});
+
+$('medCancel').onclick = () => $('medModal').style.display = 'none';
+$('apptCancel').onclick = () => $('apptModal').style.display = 'none';
+$('memberCancel').onclick = () => $('memberModal').style.display = 'none';
+$('langToggle').onclick = toggleLang;
+$('textToggle').onclick = toggleText;
+$('resetDemo').onclick = resetDemo;
+
+document.addEventListener('DOMContentLoaded', () => {
+    load();
+    $('todayDate').textContent = fmtDate(todayStr());
+});
+</script></body></html>

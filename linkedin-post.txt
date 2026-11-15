@@ -1,0 +1,14 @@
+Elderly care in India runs on memory and missed calls. A grandmother forgets her BP tablet, nobody knows until the next hospital visit — and by then it's a crisis, not a reminder.
+
+I built SahayakCare for the Catalyst hackathon's problem statement: an Elderly Care & Medication Management Platform. One shared profile for the elderly person, their family and caretakers — so everyone sees the same medicines, the same appointments, the same truth.
+
+What it does: a passcode-protected care profile with medication schedules you can add and edit, adherence tracking with a live 7-day score and day streak, doctor appointments with the next visit always in view, a care circle for family and doctors, a vitals log, and a reminders engine that flags missed doses and appointments coming up — and drafts an email to the primary caretaker in one tap.
+
+What makes it different: it's built for the person actually using it. Large-text mode, English/Hindi toggle, big touch targets, low-stock warnings before the tablets run out. No account, no server, nothing leaves the phone — all data stays in the browser. And it's honest about its limits: email reminders open in your own mail app, because a prototype shouldn't pretend to be a backend.
+
+Try it here: https://stalwart-shortbread-198c2f.netlify.app
+Code: https://github.com/amankumar7571/sahayakcare
+
+Built solo for Catalyst — Solo AI Hackathon by @Makers Need More.
+
+#AI #Hackathon #Catalyst #MakersNeedMore #ElderlyCare #HealthTech #Freshers
