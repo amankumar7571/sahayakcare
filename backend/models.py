@@ -127,3 +127,19 @@ class DoseLog(Base):
             name="uq_dose_user_date_med_slot",
         ),
     )
+
+
+class StateMeta(Base):
+    """One row per user that has ever saved a whole state via PUT /api/state.
+
+    Lets GET /api/state tell "never saved anything" (no row -> 404, so the
+    frontend keeps its local data) apart from "explicitly saved an empty
+    state" (row exists -> 200 with empty arrays). Without this marker an
+    empty PUT would be indistinguishable from never having saved.
+    """
+
+    __tablename__ = "state_meta"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now())

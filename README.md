@@ -50,14 +50,14 @@ Built by prompting Gemini, then hand-verified — every feature was traced in th
 
 ## Tests
 
-`node test.js` — 170 checks: JS syntax, every `id` the script references exists in the HTML, every CSS class/variable the rendered views use is defined, no table rows outside a table, mailto links are encoded, every `data-i18n` key exists in both languages, plus the real-app checks (no hardcoded passcode, no seeded data on boot, no demo labels, setup screen + lock-screen sign-in + sample link present). Run it before every deploy.
+`node test.js` — 192 checks: JS syntax, every `id` the script references exists in the HTML, every CSS class/variable the rendered views use is defined, no table rows outside a table, mailto links are encoded, every `data-i18n` key exists in both languages, plus the real-app checks (no hardcoded passcode, no seeded data on boot, no demo labels, setup screen + lock-screen sign-in + sample link present) and the panel-fix checks (setup preserves pulled cloud data, 401 vs 5xx auth errors with cold-start retry, share links carry no passcode, sign-in pushes local data when no server state exists, adherence createdAt guard, share-import sign-out + defaults, sample confirm, empty-adherence dash, contrast).
 
 ## Honest notes
 
 - A new profile starts empty — no pre-filled people or medicines. The sample profile is fictional data for trying the app, clearly labelled inside the app.
 - Email reminders are drafted through your own mail app (`mailto:` links) because there is no mail-sending backend; the reminders themselves are computed live from the real schedule. The cloud backend stores data only — it never sends email.
 - The passcode protects the profile on this device; the cloud account (email + password, bcrypt-hashed, JWT) is the authentication layer for sync. The passcode itself never leaves the device.
-- On Render's free tier the SQLite file resets on redeploy and the service sleeps after ~15 idle minutes — the frontend treats a sleeping backend as offline and keeps working on localStorage, so the app never breaks.
+- On Render's free tier the SQLite file resets on redeploy — and cloud data may also reset when the sleeping backend wakes on a fresh instance. Local data on the device is the source of truth: the service sleeps after ~15 idle minutes, and the frontend treats a sleeping backend as offline and keeps working on localStorage, so the app never breaks.
 
 ## Files
 

@@ -339,7 +339,13 @@ def get_state(
     if not (meds or appts or members or vitals or doses):
         # Never saved anything yet — the frontend keeps its local data
         # and pushes it on the next save instead of wiping to empty.
-        raise HTTPException(status_code=404, detail="No saved state yet")
+        # But if the user explicitly saved an empty state (StateMeta row),
+        # the empty state is real data: return it with 200, not 404.
+        has_saved = db.query(models.StateMeta).filter_by(user_id=current_user.id).first()
+        if not has_saved:
+            raise HTTPException(status_code=404, detail="No saved state yet")
+        return {"medicines": [], "appointments": [], "circle": [],
+                "vitals": [], "doseLog": {}}
     return {
         "medicines": [_med_out(m) for m in meds],
         "appointments": [_appt_out(a) for a in appts],
@@ -391,5 +397,18 @@ def put_state(
             user_id=current_user.id, date=parts[0],
             medicine_client_id=parts[1], slot=parts[2], status=status,
         ))
+    # Mark that this user has saved a state (even an empty one) so a later
+    # GET can tell "saved empty" apart from "never saved".
+    if db.query(models.StateMeta).filter_by(user_id=current_user.id).first() is None:
+        db.add(models.StateMeta(user_id=current_user.id))
     db.commit()
-    return get_state(current_user, db)
+    # Return the state just written. (Do not call get_state() here: it
+    # raises 404 when every table is empty, so an empty PUT used to answer
+    # 404 after a successful write.)
+    return {
+        "medicines": [m.model_dump() for m in payload.medicines],
+        "appointments": [a.model_dump() for a in payload.appointments],
+        "circle": [c.model_dump() for c in payload.circle],
+        "vitals": [v.model_dump() for v in payload.vitals],
+        "doseLog": dict(payload.doseLog),
+    }

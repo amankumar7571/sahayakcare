@@ -87,5 +87,42 @@ check('sample profile link exists', htmlIds.has('sampleProfileBtn'));
 check('sample banner exists', htmlIds.has('sampleBanner'));
 check('empty-state strings present', ['no_meds', 'no_appts', 'no_members', 'no_vitals'].every(k => new RegExp(k + ':\\s*"').test(script)));
 
+// 9. P0 fixes from the second judge panel (13:27 fix round)
+// 9a. setupSubmit must preserve data already pulled from the cloud
+check('setupSubmit preserves pulled arrays (no fresh-device wipe)', /medicines: state\.medicines \|\| \[\]/.test(script));
+check('setupSubmit preserves pulled appointments', /appointments: state\.appointments \|\| \[\]/.test(script));
+// 9b. auth errors: 401 is the ONLY wrong-password message; 5xx/network retry + wake-up message
+check('wrong-password message appears exactly once (the 401 branch)', (script.match(/Wrong email or password/g) || []).length === 1);
+check('401 is checked explicitly before the wrong-password message', /res\.status === 401/.test(script));
+check('sign-in retry helper exists', /function signInWithRetry/.test(script));
+check('cold-start retry waits ~50s', /COLD_START_RETRY_MS = 50000/.test(script));
+check('wake-up message exists', /Cloud is waking up — please try again in a moment/.test(script));
+check('sign-up retries on 5xx/network too', /Same cold-start retry as sign-in/.test(script));
+// 9c. share links must not contain the passcode
+const shareFn = (script.match(/function shareProfile\(\) \{[\s\S]*?\n\}/) || [])[0] || '';
+check('shareProfile strips the passcode from the payload', /const \{ passcode, \.\.\.shared \} = state/.test(shareFn));
+check('shareProfile encodes the stripped payload, not the whole state', /JSON\.stringify\(shared\)/.test(shareFn) && !/JSON\.stringify\(state\)/.test(shareFn));
+// 9d. sign-in must not destroy local data: pull first, push when no server state
+check('syncAfterSignIn helper exists', /function syncAfterSignIn/.test(script));
+check('sign-in uses syncAfterSignIn (not a bare syncPull)', /await syncAfterSignIn\(\)/.test(script));
+check('syncAfterSignIn pushes local data when pull finds nothing', /if \(!pulled\) await api\.syncPush\(\)/.test(script));
+
+// 10. QA fixes (M1/M2/M4/M5) + quick P1s
+// M1: getAdherence skips days before a medicine was created (same guard as getStreak)
+check('getAdherence has the createdAt guard', /function getAdherence\(\)[\s\S]*?m\.createdAt && m\.createdAt > d/.test(script));
+// M2: sample profile asks for confirmation first
+check('sample profile confirms before replacing the local profile', /confirm\('Load the sample profile\?/.test(script));
+// M4: share import signs out first so it never overwrites the cloud backup
+check('load() signs out before applying shared state', /function load\(\)[\s\S]*?api\.token = ''[\s\S]*?state = \{/.test(script));
+// M5: share import merges over the default shape (partial links cannot crash the app)
+check('load() validates the shared appointments array', /appointments: Array\.isArray\(shared\.appointments\) \? shared\.appointments : \[\]/.test(script));
+check('load() defaults a missing doseLog to {}', /doseLog: shared\.doseLog && typeof shared\.doseLog === 'object' \? shared\.doseLog : \{\}/.test(script));
+check('load() never imports a passcode from a link', /passcode: '',\n\s*sample: false,/.test(script));
+// P1: empty adherence shows a dash, never a false 100%
+check('empty adherence shows "No doses yet"', /No doses yet — add a medicine to start tracking/.test(script));
+// P1: contrast fixes
+check('--text-light is the darker #475569', /--text-light:#475569/.test(html));
+check('no text-[10px] disclaimer remains', !/text-\[10px\]/.test(html));
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);

@@ -6,7 +6,7 @@
     <title>SahayakCare — Elderly Care & Medication Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --primary:#0F766E; --text-light:#64748b; --danger:#DC2626; }
+        :root { --primary:#0F766E; --text-light:#475569; --danger:#DC2626; }
         html.large-text { font-size: 125%; }
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; }
         .card { background:#fff; border-radius:1rem; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:1rem; }
@@ -59,7 +59,7 @@
             <p id="sampleNote" class="hidden text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">Sample profile loaded — unlock with passcode 1234.</p>
             <button id="sampleProfileBtn" type="button" class="text-sm text-teal-700 underline" data-i18n="lock_sample">Explore a sample profile</button>
         </div>
-        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
+        <div class="mt-8 pt-6 border-t border-slate-100 text-sm text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
     </div>
 </div>
 
@@ -90,7 +90,7 @@
             <button id="setupSubmit" data-i18n="setup_submit" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Create profile</button>
             <p class="text-center text-sm"><button id="setupSignInLink" type="button" class="text-teal-700 underline" data-i18n="setup_signin">Already have an account? Sign in</button></p>
         </div>
-        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
+        <div class="mt-8 pt-6 border-t border-slate-100 text-sm text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
     </div>
 </div>
 
@@ -680,9 +680,26 @@ function load() {
         try {
             const shared = JSON.parse(decodeURIComponent(escape(atob(hash.slice(3)))));
             if (shared && Array.isArray(shared.medicines)) {
-                state = shared;
+                // Shared state belongs to someone else: sign out first so
+                // the import never overwrites the signed-in user's cloud
+                // backup (save() below would syncPush it to their account).
+                api.token = '';
+                // Merge over the default shape: a partial link (missing
+                // appointments / circle / vitals / doseLog) must not crash
+                // the app on unlock. The passcode is never imported — the
+                // recipient sets their own on the setup screen.
+                state = {
+                    profileName: typeof shared.profileName === 'string' ? shared.profileName : '',
+                    profileAge: typeof shared.profileAge === 'number' ? shared.profileAge : null,
+                    medicines: shared.medicines,
+                    appointments: Array.isArray(shared.appointments) ? shared.appointments : [],
+                    circle: Array.isArray(shared.circle) ? shared.circle : [],
+                    vitals: Array.isArray(shared.vitals) ? shared.vitals : [],
+                    doseLog: shared.doseLog && typeof shared.doseLog === 'object' ? shared.doseLog : {},
+                    passcode: '',
+                    sample: false,
+                };
                 if (!state.profileName) state.profileName = 'Shared profile';
-                if (typeof state.passcode !== 'string') state.passcode = '';
                 save();
                 history.replaceState(null, '', location.pathname);
                 return;
@@ -750,6 +767,10 @@ function getAdherence() {
     for (let i = 0; i < 7; i++) {
         const d = datePlus(-i);
         state.medicines.forEach(m => {
+            // A medicine only counts from the day it was added (same guard
+            // as getStreak) — otherwise a medicine created today scores
+            // ~61% for doses taken perfectly since it existed.
+            if (m.createdAt && m.createdAt > d) return;
             m.times.forEach(slot => {
                 if (i === 0 && SLOT_HOURS[slot] > hr) return;
                 total++;
@@ -871,9 +892,15 @@ function renderDashboard() {
     $('statStreak').textContent = getStreak();
 
     const adh = getAdherence();
-    $('adherencePct').textContent = adh.pct + "%";
-    $('adherenceNote').textContent = `${adh.taken} of ${adh.total} doses taken in the last 7 days. ${adherenceInsight()}`;
-    const offset = 339 - (adh.pct / 100) * 339;
+    if (adh.total === 0) {
+        // No doses exist yet: show a dash, never a false 100% ring.
+        $('adherencePct').textContent = '—';
+        $('adherenceNote').textContent = 'No doses yet — add a medicine to start tracking.';
+    } else {
+        $('adherencePct').textContent = adh.pct + "%";
+        $('adherenceNote').textContent = `${adh.taken} of ${adh.total} doses taken in the last 7 days. ${adherenceInsight()}`;
+    }
+    const offset = 339 - ((adh.total === 0 ? 0 : adh.pct) / 100) * 339;
     $('adherenceSvg').innerHTML = `
         <svg viewBox="0 0 120 120">
             <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" stroke-width="10" />
@@ -1119,7 +1146,11 @@ function dismissReminder(id) {
 }
 
 function shareProfile() {
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    // Never put the passcode in a shared link: strip it from the payload.
+    // The recipient sets their own passcode on import (load() drops any
+    // passcode in the payload and the setup screen collects a new one).
+    const { passcode, ...shared } = state;
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(shared))));
     const url = location.origin + location.pathname + '#p=' + encoded;
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(() => alert('Share link copied! Anyone with the link can open this care profile.'));
@@ -1188,6 +1219,12 @@ function showBootScreen() {
     $('passInput').value = '';
     $('lockError').style.display = 'none';
     $('sampleNote').style.display = 'none';
+    // A share import has a name but no passcode yet: pre-fill the setup
+    // form so the recipient only sets a passcode.
+    if (!hasProfile && state.profileName) {
+        $('setupName').value = state.profileName;
+        if (state.profileAge) $('setupAge').value = state.profileAge;
+    }
     refreshAuthUI();
 }
 
@@ -1202,8 +1239,10 @@ function refreshLockAuthUI() {
 $('lockAuthBtn').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
 $('lockSignOutBtn').onclick = () => { api.token = ''; refreshAuthUI(); };
 $('sampleProfileBtn').onclick = () => {
-    // Sample data is local-only: sign out first so fictional data never
-    // overwrites the signed-in user's real cloud profile.
+    // One tap must not silently wipe a real local profile: confirm first.
+    // (The token is still cleared below so fictional data never overwrites
+    // the signed-in user's real cloud profile.)
+    if (!confirm('Load the sample profile? This replaces the profile on this device.')) return;
     api.token = '';
     sampleData();
     showBootScreen();
@@ -1220,7 +1259,11 @@ $('setupSubmit').onclick = () => {
     if (!name) return fail('Enter the name of the person this profile is for.');
     if (!/^\d{4}$/.test(pass)) return fail('Passcode must be exactly 4 digits.');
     if (pass !== confirmPass) return fail('Passcodes do not match.');
-    state = { profileName: name, profileAge: age ? parseInt(age, 10) : null, medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: pass, sample: false };
+    // Only the profile identity is new here. Keep any care data already
+    // pulled from the cloud (e.g. after signing in on a fresh device) —
+    // resetting the arrays would save() an empty state and wipe the
+    // cloud profile on the next sync.
+    state = { profileName: name, profileAge: age ? parseInt(age, 10) : null, medicines: state.medicines || [], appointments: state.appointments || [], circle: state.circle || [], vitals: state.vitals || [], doseLog: state.doseLog || {}, passcode: pass, sample: false };
     save();
     err.style.display = 'none';
     $('setupScreen').style.display = 'none';
@@ -1384,16 +1427,38 @@ $('authSignOut').onclick = () => {
     refreshAuthUI();
     $('authModal').style.display = 'none';
 };
+// Sign-in with one retry after a cold-start delay. Render's free tier
+// sleeps when idle and takes ~50s to wake; a first attempt can fail with
+// a network error or a 5xx while the service boots. A 401 is a real
+// wrong password and is never retried.
+const COLD_START_RETRY_MS = 50000;
+async function signInWithRetry(email, password) {
+    let res = await api.signIn(email, password);
+    if (res === null || (res.status >= 500 && res.status < 600)) {
+        $('authStatus').textContent = 'Cloud is waking up — trying again…';
+        await new Promise(r => setTimeout(r, COLD_START_RETRY_MS));
+        res = await api.signIn(email, password);
+    }
+    return res;
+}
+// After sign-in: pull the cloud copy if one exists; if the account has
+// no saved state yet, push the local data up instead. An unconditional
+// pull would leave local unsynced data stranded on the device.
+async function syncAfterSignIn() {
+    const pulled = await api.syncPull();
+    if (!pulled) await api.syncPush();
+}
 $('authSignIn').onclick = async () => {
     const email = $('authEmail').value.trim();
     const password = $('authPassword').value;
     if (!email || !password) { $('authStatus').textContent = 'Enter your email and password.'; return; }
     $('authStatus').textContent = 'Signing in…';
-    const res = await api.signIn(email, password);
-    if (res === null) { $('authStatus').textContent = 'Could not reach the cloud right now — the app keeps working offline.'; return; }
-    if (res.status !== 200 || !res.data.access_token) { $('authStatus').textContent = 'Wrong email or password.'; return; }
+    const res = await signInWithRetry(email, password);
+    if (res === null) { $('authStatus').textContent = 'Cloud is waking up — please try again in a moment.'; return; }
+    if (res.status === 401) { $('authStatus').textContent = 'Wrong email or password.'; return; }
+    if (res.status !== 200 || !res.data.access_token) { $('authStatus').textContent = 'Cloud is waking up — please try again in a moment.'; return; }
     api.token = res.data.access_token;
-    await api.syncPull();
+    await syncAfterSignIn();
     refreshAuthUI();
     if ($('app').style.display !== 'block') showBootScreen();
     $('authModal').style.display = 'none';
@@ -1405,11 +1470,17 @@ $('authSignUp').onclick = async () => {
     const password = $('authPassword').value;
     if (!name || !email || !password) { $('authStatus').textContent = 'Enter a name, email and password to create an account.'; return; }
     $('authStatus').textContent = 'Creating account…';
-    const res = await api.signUp(name, email, password);
-    if (res === null) { $('authStatus').textContent = 'Could not reach the cloud right now — the app keeps working offline.'; return; }
+    let res = await api.signUp(name, email, password);
+    if (res === null || (res.status >= 500 && res.status < 600)) {
+        // Same cold-start retry as sign-in (see signInWithRetry).
+        $('authStatus').textContent = 'Cloud is waking up — trying again…';
+        await new Promise(r => setTimeout(r, COLD_START_RETRY_MS));
+        res = await api.signUp(name, email, password);
+    }
+    if (res === null) { $('authStatus').textContent = 'Cloud is waking up — please try again in a moment.'; return; }
     if (res.status === 400) { $('authStatus').textContent = 'That email is already registered — try signing in.'; return; }
     if (res.status !== 201) { $('authStatus').textContent = 'Could not create the account. Please try again.'; return; }
-    const login = await api.signIn(email, password);
+    const login = await signInWithRetry(email, password);
     if (login && login.status === 200 && login.data.access_token) {
         api.token = login.data.access_token;
         await api.syncPush(); // first save: upload the local data to the new account

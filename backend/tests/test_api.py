@@ -165,6 +165,24 @@ def test_state_round_trip(client, registered_user):
     assert client.get("/api/medicines", headers=h).json() == []
 
 
+def test_state_empty_put_returns_200_and_get_returns_empty_state(client, registered_user):
+    _, h = registered_user
+    # Never saved: GET is 404 so the frontend keeps its local data.
+    assert client.get("/api/state", headers=h).status_code == 404
+
+    # An explicit empty PUT is a successful write, not a 404.
+    empty = {"medicines": [], "appointments": [], "circle": [],
+             "vitals": [], "doseLog": {}}
+    r = client.put("/api/state", json=empty, headers=h)
+    assert r.status_code == 200, r.text
+    assert r.json() == empty
+
+    # After that save, GET returns the (empty) saved state, not 404.
+    r = client.get("/api/state", headers=h)
+    assert r.status_code == 200, r.text
+    assert r.json() == empty
+
+
 # ------------------------------------------------------------------ isolation
 def test_users_cannot_see_each_others_data(client, registered_user):
     _, h1 = registered_user
