@@ -82,7 +82,7 @@ check('no "Demo passcode" text anywhere', !/Demo passcode/i.test(html));
 check('no "DEMO DATA" footer', !/DEMO DATA/.test(html));
 check('medical-advice footer present', /does not replace medical advice/.test(html));
 check('setup screen exists and is hidden by default', /id="setupScreen" class="hidden/.test(html));
-check('lock-screen sign-in button exists', htmlIds.has('lockAuthBtn'));
+check('lock-screen sign-in link exists (secondary, below Unlock)', htmlIds.has('lockAuthBtn'));
 check('sample profile link exists', htmlIds.has('sampleProfileBtn'));
 check('sample banner exists', htmlIds.has('sampleBanner'));
 check('empty-state strings present', ['no_meds', 'no_appts', 'no_members', 'no_vitals'].every(k => new RegExp(k + ':\\s*"').test(script)));
@@ -195,6 +195,36 @@ check('hint is shown when signed in', /function refreshLockAuthUI[\s\S]*?\$\('lo
 check('hint English text present', /lock_signedin_hint: "You're signed in for cloud sync — enter your 4-digit passcode to open this profile\."/.test(script));
 check('hint Hindi text present', /lock_signedin_hint: "आप क्लाउड सिंक के लिए साइन इन हैं — प्रोफ़ाइल खोलने के लिए अपना 4 अंकों का पासकोड डालें।"/.test(script));
 check('auth flow is unchanged (no auto-unlock on sign-in)', !/authSignIn[\s\S]*?unlockBtn['"]\)\.click/.test(script));
+
+// 13. Round 4: passcode is the front door, unlock remembered per session
+// 13a. Lock-screen hierarchy: passcode first, sign-in a small secondary link
+check('passcode input + Unlock come before the sign-in link', /id="passInput"[\s\S]*?id="unlockBtn"[\s\S]*?id="lockAuthBtn"/.test(html));
+check('sign-in on the lock screen is a text link, not a primary button', /<button id="lockAuthBtn" type="button" class="text-teal-700 underline"/.test(html));
+check('lock-screen sign-in link has no primary-button styling', !/id="lockAuthBtn"[^>]*bg-\[#0F766E\]/.test(html));
+check('sign-in link sits inside the lock screen', /id="lockScreen"[\s\S]*?id="lockAuthBtn"/.test(html));
+check('sign-in link English text present', /lock_signin_link: "Want this profile on another device\? Sign in for cloud sync"/.test(script));
+check('sign-in link Hindi text present', /lock_signin_link: "यह प्रोफ़ाइल दूसरे डिवाइस पर चाहिए\? क्लाउड सिंक के लिए साइन इन करें"/.test(script));
+check('old primary sign-in label is gone', !/lock_signin: "Sign in \/ Create account"/.test(script));
+check('old or-passcode divider key is gone', !/lock_or_passcode:/.test(script));
+// 13b. Remember unlock for the browser session (sessionStorage, per-tab)
+check('session unlock key defined', /const UNLOCKED_KEY = 'sahayakcare_unlocked'/.test(script));
+check('isUnlockedSession helper exists', /function isUnlockedSession\(\)/.test(script));
+check('setUnlockedSession helper exists', /function setUnlockedSession\(\)/.test(script));
+check('clearUnlockedSession helper exists', /function clearUnlockedSession\(\)/.test(script));
+check('flag is stored in sessionStorage (per-tab), not localStorage', /sessionStorage\.setItem\(UNLOCKED_KEY, '1'\)/.test(script) && !/localStorage\.(setItem|getItem|removeItem)\(UNLOCKED_KEY/.test(script));
+check('openApp helper shows the app directly', /function openApp\(\) \{[\s\S]*?\$\('app'\)\.style\.display = 'block'/.test(script));
+const unlockFn = (script.match(/\$\('unlockBtn'\)\.onclick = \(\) => \{[\s\S]*?\n\};/) || [])[0] || '';
+check('successful unlock sets the session flag', /setUnlockedSession\(\)/.test(unlockFn));
+check('successful unlock opens the app', /openApp\(\)/.test(unlockFn));
+check('wrong passcode still shows the error', /lockError/.test(unlockFn));
+check('boot skips the lock screen when unlocked this session', /function showBootScreen\(\) \{[\s\S]*?isUnlockedSession\(\)[\s\S]*?openApp\(\)/.test(script));
+check('Lock button clears the session flag', /\$\('lockBtn'\)\.onclick = \(\) => \{ clearUnlockedSession\(\); showBootScreen\(\); \}/.test(script));
+check('lock-screen sign-out clears the session flag', /\$\('lockSignOutBtn'\)\.onclick = \(\) => \{ api\.token = ''; clearUnlockedSession\(\); refreshAuthUI\(\); \}/.test(script));
+check('auth-modal sign-out clears the session flag', /\$\('authSignOut'\)\.onclick = \(\) => \{[\s\S]*?clearUnlockedSession\(\)/.test(script));
+check('setupSubmit clears the session flag (new profile, new passcode)', /\$\('setupSubmit'\)\.onclick = \(\) => \{[\s\S]*?clearUnlockedSession\(\)/.test(script));
+check('sample load clears the session flag', /function loadSampleProfile\(\)[\s\S]*?clearUnlockedSession\(\)/.test(script));
+check('resetDemo clears the session flag', /function resetDemo[\s\S]*?clearUnlockedSession\(\)/.test(script));
+check('sign-in returns to the boot screen (passcode still required)', /\$\('authSignIn'\)\.onclick = async \(\) => \{[\s\S]*?showBootScreen\(\)/.test(script));
 
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);
