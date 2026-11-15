@@ -18,15 +18,16 @@ API docs: http://127.0.0.1:8000/docs — Health: `GET /health`.
 1. Push this repo to GitHub (the `render.yaml` in this folder is the
    Blueprint — in the Render dashboard create a new Blueprint and point
    it at `backend/render.yaml`, or copy it to the repo root).
-2. Render creates the `sahayakcare-backend` web service (plan: free) and
+2. Render creates the `sahayakcare` web service (plan: free) and
    generates a random `JWT_SECRET_KEY` for you.
-3. Copy the service URL (e.g. `https://sahayakcare-backend.onrender.com`)
-   into `index.html`: `const API_BASE_URL = "https://sahayakcare-backend.onrender.com";`
+3. Copy the service URL (live: `https://sahayakcare.onrender.com`)
+   into `index.html`: `const API_BASE_URL = "https://sahayakcare.onrender.com";`
    (no trailing slash needed). Redeploy the frontend.
 
 Free-tier notes, stated plainly:
 - The SQLite file lives on the service's ephemeral disk — data survives
-  restarts but **resets on redeploy**. The frontend always keeps a local
+  restarts but **resets on redeploy, and also when the sleeping backend
+  wakes on a fresh instance**. The frontend always keeps a local
   copy in localStorage, so the demo never loses data.
 - Free web services **sleep after ~15 minutes of inactivity** and take
   ~30–60s to wake on the next request. The frontend treats a sleeping
