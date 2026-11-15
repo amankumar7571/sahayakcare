@@ -52,6 +52,21 @@ def _vital_out(v: models.Vital) -> dict:
     }
 
 
+def _dose_out(d: models.DoseLog) -> dict:
+    return {
+        "date": d.date, "medicine_id": d.medicine_client_id,
+        "slot": d.slot, "status": d.status,
+    }
+
+
+def _require_times(med: schemas.MedicineIn):
+    # A medicine with no time slots never appears in today's doses.
+    if not med.times:
+        raise HTTPException(
+            status_code=422, detail="Pick at least one time slot"
+        )
+
+
 def _get_or_404(query, client_id: str, what: str):
     row = query.filter_by(client_id=client_id).first()
     if row is None:
@@ -77,6 +92,7 @@ def create_medicine(
 ):
     if db.query(models.Medicine).filter_by(user_id=current_user.id, client_id=med.id).first():
         raise HTTPException(status_code=400, detail="Medicine id already exists")
+    _require_times(med)
     row = models.Medicine(
         user_id=current_user.id, client_id=med.id, name=med.name, dose=med.dose,
         times=med.times, purpose=med.purpose, stock=med.stock,
@@ -97,6 +113,7 @@ def update_medicine(
     row = _get_or_404(
         db.query(models.Medicine).filter_by(user_id=current_user.id), client_id, "Medicine"
     )
+    _require_times(med)
     row.name, row.dose, row.times = med.name, med.dose, med.times
     row.purpose, row.stock, row.notes = med.purpose, med.stock, med.notes
     row.created_at = med.createdAt
@@ -292,11 +309,7 @@ def list_doses(
         q = q.filter(models.DoseLog.date >= date_from)
     if date_to:
         q = q.filter(models.DoseLog.date <= date_to)
-    return [
-        {"date": d.date, "medicine_id": d.medicine_client_id,
-         "slot": d.slot, "status": d.status}
-        for d in q.all()
-    ]
+    return [_dose_out(d) for d in q.all()]
 
 
 @router.post("/doses", response_model=schemas.DoseOut, status_code=201)
@@ -319,10 +332,7 @@ def upsert_dose(
     else:
         row.status = dose.status
     db.commit()
-    return {
-        "date": row.date, "medicine_id": row.medicine_client_id,
-        "slot": row.slot, "status": row.status,
-    }
+    return _dose_out(row)
 
 
 # ---------------------------------------------------------------- whole-state sync
@@ -391,8 +401,14 @@ def put_state(
         ))
     for key, status in payload.doseLog.items():
         parts = key.split("|")
-        if len(parts) != 3:
-            continue
+        # A malformed dose key is a 422, not a silent skip: silently
+        # dropping entries would lose dose history without a trace.
+        if (
+            len(parts) != 3
+            or parts[2] not in ("morning", "afternoon", "evening", "night")
+            or status not in ("taken", "missed")
+        ):
+            raise HTTPException(status_code=422, detail=f"Malformed dose key: {key}")
         db.add(models.DoseLog(
             user_id=current_user.id, date=parts[0],
             medicine_client_id=parts[1], slot=parts[2], status=status,

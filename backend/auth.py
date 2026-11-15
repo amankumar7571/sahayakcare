@@ -73,7 +73,9 @@ def get_current_user(
 )
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.email == user.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+        # Deliberately generic: the same message either way, so the
+        # endpoint cannot be used to enumerate registered emails.
+        raise HTTPException(status_code=400, detail="Could not create the account")
     new_user = models.User(
         name=user.name,
         email=user.email,

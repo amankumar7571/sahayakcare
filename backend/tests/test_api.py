@@ -73,7 +73,7 @@ def test_medicine_crud_flow(client, registered_user):
 
 def test_duplicate_medicine_id_rejected(client, registered_user):
     _, h = registered_user
-    med = {"id": "m1", "name": "A", "dose": "1 mg", "times": []}
+    med = {"id": "m1", "name": "A", "dose": "1 mg", "times": ["morning"]}
     assert client.post("/api/medicines", json=med, headers=h).status_code == 201
     assert client.post("/api/medicines", json=med, headers=h).status_code == 400
 
@@ -186,7 +186,7 @@ def test_state_empty_put_returns_200_and_get_returns_empty_state(client, registe
 # ------------------------------------------------------------------ isolation
 def test_users_cannot_see_each_others_data(client, registered_user):
     _, h1 = registered_user
-    med = {"id": "m1", "name": "Metformin", "dose": "500 mg", "times": []}
+    med = {"id": "m1", "name": "Metformin", "dose": "500 mg", "times": ["morning"]}
     assert client.post("/api/medicines", json=med, headers=h1).status_code == 201
 
     client.post("/api/auth/register",

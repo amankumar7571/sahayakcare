@@ -15,17 +15,17 @@ Live: https://stalwart-shortbread-198c2f.netlify.app
 1. **Create your care profile** — enter the elderly person's name, set a 4-digit passcode, and you are in with an empty profile. Or tap **Explore a sample profile** to try a pre-filled one (you set your own 4-digit passcode when you open it — nothing is preset).
 2. Add a medicine — watch the dashboard, adherence ring and streak move.
 3. Open **Reminders** — missed and due-soon doses, upcoming appointments, low stock.
-4. Tap **Send email reminder** — a pre-filled email to the primary caretaker opens in your mail app.
+4. Tap **Draft email to caretaker** — a pre-filled email to the primary caretaker opens in your mail app.
 5. Open **Care Circle** — add a family member; they join as *Pending approval* until the profile owner approves them.
 6. Tap **Share care profile** in the footer — it copies a link that opens this exact profile on another device.
-7. Tap **Sign in / Create account** on the lock screen (or ☁️ Cloud sync in the header) to save the profile to the cloud and open it on any device.
+7. Tap the small **Sign in for cloud sync** link on the lock screen (or ☁️ Cloud sync in the header) to save the profile to the cloud and open it on any device.
 
 ## How it maps to the problem statement
 
 | Requirement | Status | How |
 |---|---|---|
 | Shared ecosystem (elderly + caretakers + family) | ✅ | One care profile + Care Circle; a share link opens the same profile on another device |
-| Secure passcode-based access | ✅ | Lock screen gates the whole app; the passcode is set when the profile is created and can be changed after unlocking |
+| Secure passcode-based access | ✅ | Lock screen gates the whole app; the passcode is set when the profile is created, stored only as a SHA-256 hash with a 5-try lockout, and can be changed after unlocking |
 | View / add / edit / manage medication schedules | ✅ | Full medicine CRUD: dose, 4 time slots, purpose, stock, notes |
 | Adherence tracking | ✅ | Taken/Missed per dose, 7-day adherence ring + %, day streak, most-missed-slot insight |
 | Appointment monitoring | ✅ | Full appointment CRUD, next appointment on the dashboard, past ones marked Done |
@@ -36,21 +36,21 @@ Live: https://stalwart-shortbread-198c2f.netlify.app
 ## Accounts & the passcode
 
 - **Cloud account (the real auth):** sign up / sign in with email + password from the lock screen or the ☁️ Cloud sync button. Passwords are bcrypt-hashed, sessions are JWTs, and every user only sees their own data. The backend is FastAPI + SQLite on Render's free tier, live at https://sahayakcare.onrender.com.
-- **Passcode (per profile):** the profile is protected by a 4-digit passcode chosen when the profile is created; it can be changed after unlocking. It never leaves the device and is never sent to the server.
+- **Passcode (per profile):** the profile is protected by a 4-digit passcode chosen when the profile is created; it can be changed after unlocking. It is stored only as a SHA-256 hash, never leaves the device and is never sent to the server.
 - **First run:** a new visitor creates a profile (name + passcode) and starts empty — no pre-filled people or medicines.
 - **Sample profile:** "Explore a sample profile" loads clearly-labelled fictional data (Shanti Devi) to try the app — you set your own 4-digit passcode when you open it. It is local-only and never touches a real account.
 
 ## Tech
 
-Single self-contained `index.html` — vanilla JavaScript + Tailwind CSS, no build step. New profiles start empty; data lives in the browser's `localStorage` (key `sahayakcare_v1`); a share link carries the profile in the URL hash. Nothing leaves the device except the email you choose to send and, when signed in, the profile data synced to the backend.
+Single self-contained `index.html` — vanilla JavaScript + Tailwind CSS (built once and inlined, no CDN at runtime). New profiles start empty; data lives in the browser's `localStorage` (key `sahayakcare_v1`); a share link carries the profile in the URL hash. Nothing leaves the device except the email you choose to send and, when signed in, the profile data synced to the backend.
 
 **Cloud backend** (`backend/` — FastAPI + SQLite + JWT auth, free Render tier): the app is wired to the live backend at https://sahayakcare.onrender.com (`API_BASE_URL` near the top of the script in `index.html`). Sign in and the profile syncs to the cloud; if the backend is unreachable, the app keeps working on localStorage. See `backend/README.md` for the API, env vars, and deploy steps.
 
-Built by prompting Gemini, then hand-verified — every feature was traced in the code and tested in the browser (see `test.js`).
+Built by prompting Gemini, then hand-verified — every feature is verified by 909 static checks in `test.js`, 102 behavioural checks in `tests/harness.js`, and 31 backend tests, plus live browser verification.
 
 ## Tests
 
-`node test.js` — 346 checks: JS syntax, every `id` the script references exists in the HTML, every CSS class/variable the rendered views use is defined, no table rows outside a table, mailto links are encoded, every `data-i18n` key exists in both languages, plus the real-app checks (no hardcoded passcode, no seeded data on boot, no demo labels, setup screen + lock-screen sign-in + sample link present) and the panel-fix checks (setup preserves pulled cloud data, 401 vs 5xx auth errors with cold-start retry, share links carry no passcode, sign-in pushes local data when no server state exists, adherence createdAt guard, share-import sign-out + defaults, sample confirm, empty-adherence dash, contrast, passcode-change modal, share modal, future-slot disabling, reminders consistency, setup-screen sample link, dismissed-reminder persistence, lock-screen sign-in hint).
+`node test.js` — 909 checks: JS syntax, every `id` the script references exists in the HTML, every CSS class/variable the rendered views use is defined, no table rows outside a table, mailto links are encoded, every `data-i18n` key exists in both languages, plus the real-app checks (no hardcoded passcode, no seeded data on boot, no demo labels, setup screen + lock-screen sign-in + sample link present) and the panel-fix checks (setup preserves pulled cloud data, 401 vs 5xx auth errors with cold-start retry, share links carry no passcode, sign-in pushes local data when no server state exists, adherence createdAt guard, share-import sign-out + defaults, sample passcode modal, empty-adherence dash, contrast, passcode-change modal, share modal, future-slot disabling, reminders consistency, setup-screen sample link, dismissed-reminder persistence, lock-screen sign-in hint) and the round-8 checks (passcode SHA-256 hash + 5-try lockout, merge-on-pull never blind-replaces, honest sync label, Tailwind built and inlined with no CDN, dialog semantics + focus management, zero native dialogs). `node tests/harness.js` — 102 behavioural checks that execute the real app in a stub DOM (sample tap, auth error mapping, sync pull/push incl. failure-vs-empty, offline fallback, corrupted storage, share import). `pytest backend/tests` — 31 tests (auth, validation, CRUD, state sync, per-user isolation). CI runs all three on every push (`.github/workflows/test.yml`).
 
 ## Honest notes
 

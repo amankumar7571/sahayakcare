@@ -49,7 +49,9 @@ class Medicine(Base):
     dose = Column(String, nullable=False)
     times = Column(JSON, nullable=False, default=list)  # e.g. ["morning", "night"]
     purpose = Column(String, default="")
-    stock = Column(Integer, default=0)
+    # None = "not tracked" (blank stock in the frontend). No default=0:
+    # a column default would turn an explicit NULL back into 0.
+    stock = Column(Integer, nullable=True)
     notes = Column(Text, default="")
     created_at = Column(String, default="")  # YYYY-MM-DD, from the frontend
 

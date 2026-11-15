@@ -1,16 +1,31 @@
-Elderly care in India runs on memory and missed calls. A grandmother forgets her BP tablet, nobody knows until the next hospital visit — and by then it's a crisis, not a reminder.
+🚀 I just participated in *CATALYST - Solo AI Hackathon*, a hackathon organised by *Makers Need More (MnM)* in collaboration with *PromptWars*!
 
-I built SahayakCare for the Catalyst hackathon's problem statement: an Elderly Care & Medication Management Platform. One shared profile for the elderly person, their family and caretakers — so everyone sees the same medicines, the same appointments, the same truth.
+It was an exciting opportunity to turn ideas into reality, explore innovative solutions, and challenge myself to build something meaningful.
 
-What it does: a passcode-protected care profile with medication schedules you can add and edit, adherence tracking with a live 7-day score, day streak and a "most-missed slot" insight, doctor appointments with the next visit always in view, a care circle where new members need the elderly person's approval, a vitals log, and a reminders engine that flags missed doses and appointments coming up — and drafts the email to the primary caretaker in one tap.
+💡 *My Project:*
+SahayakCare
 
-What makes it different: it's built for the 74-year-old, not the 24-year-old developer. Large-text mode, English/Hindi toggle, big touch targets. No account, no server, nothing leaves the phone — all data stays in the browser, and a share link opens the same profile on a family member's device.
+🔍 *Problem Statement:*
+Elderly Care & Medication Management Platform
 
-Built as a single self-contained HTML file — vanilla JavaScript + Tailwind, data in localStorage — by prompting Gemini, then hand-verified line by line. 117 automated checks pass on the code.
+🛠️ *What I Built:*
+SahayakCare is a passcode-protected shared care platform that helps an elderly person, their family and caretakers manage medications, appointments and daily health routines in one place. It tracks medication schedules with 7-day adherence scoring and streaks, manages doctor appointments, lets new care-circle members join only with the elderly person's approval, logs vitals, and drafts a caretaker email in one tap when a dose is missed or an appointment is near — going beyond a basic reminder app to keep the whole family informed.
 
-Try it here: https://stalwart-shortbread-198c2f.netlify.app
-Code: https://github.com/amankumar7571/sahayakcare
+Medication schedules — 4 daily slots, stock tracking and low-stock alerts.
+Adherence tracking — today's doses, 7-day ring, streaks and most-missed slot insight.
+Appointments — upcoming visits with reminders.
+Care circle — family and doctors join only after the owner's approval.
+Vitals log — blood pressure, sugar, weight, pulse.
+Smart reminders — overdue and due-soon alerts, one-tap email to caretakers.
+Secure and synced — passcode-protected, works offline, cloud sync across devices.
+Made for elders — Hindi/English toggle and large-text mode.
 
-Built solo for Catalyst — Solo AI Hackathon by @Makers Need More.
+💻 *Tech Stack:*
+Vanilla JavaScript, Tailwind CSS, HTML, localStorage frontend + FastAPI, SQLite and JWT backend on Render, with live cloud sync.
 
-#AI #Hackathon #Catalyst #MakersNeedMore #ElderlyCare #HealthTech #Freshers
+📌 *Project Demo:* https://stalwart-shortbread-198c2f.netlify.app
+📌 *GitHub Repository:* https://github.com/amankumar7571/sahayakcare
+
+@MnM
+
+#Catalyst2026 #MakersNeedMore #MnM #Hackathon #BuildInPublic #Innovation #TechCommunity

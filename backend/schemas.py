@@ -6,14 +6,15 @@ never sent to the server).
 """
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 # ---------------------------------------------------------------- auth
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    password: str
+    # 1-character passwords were accepted before; 8 is the minimum.
+    password: str = Field(min_length=8, max_length=128)
 
 
 class UserResponse(BaseModel):
@@ -38,9 +39,14 @@ class MedicineIn(BaseModel):
     id: str
     name: str
     dose: str
-    times: list[str] = []
+    # Only the four known slots are accepted (an invalid slot is a 422);
+    # the list may be empty at the schema level so an old synced state
+    # with a zero-slot medicine still loads — the frontend blocks creating
+    # a medicine with no slots, and flags existing ones in the UI.
+    times: list[Literal["morning", "afternoon", "evening", "night"]] = []
     purpose: str = ""
-    stock: int = 0
+    # None = "not tracked" (blank stock in the frontend); never negative.
+    stock: Optional[int] = Field(default=0, ge=0)
     notes: str = ""
     createdAt: str = ""
 

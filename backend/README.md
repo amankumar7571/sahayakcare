@@ -72,5 +72,5 @@ client. The demo passcode is local-only and is never sent to the server.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest tests/ -q   # 15 tests: auth flow, full CRUD, state sync, per-user isolation
+.venv/bin/python -m pytest tests/ -q   # 31 tests: auth flow, validation, full CRUD, state sync, per-user isolation
 ```

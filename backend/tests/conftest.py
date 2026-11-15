@@ -1,6 +1,12 @@
 """pytest fixtures: fresh in-memory SQLite DB per test, TestClient."""
+import os
 import sys
 from pathlib import Path
+
+# Tests run without a real JWT secret: opt into the local-dev random
+# per-process secret BEFORE importing the app (config fails closed
+# without it).
+os.environ.setdefault("SAHAYAKCARE_ALLOW_DEV_SECRET", "1")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 

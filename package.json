@@ -1,0 +1,1 @@
+{"description":"Elderly Care & Medication Management Platform — Catalyst Solo AI Hackathon","devDependencies":{"eslint":"^9.0.0","prettier":"^3.0.0"},"name":"sahayakcare","private":true,"scripts":{"lint":"eslint test.js tests/harness.js","test":"node test.js && node tests/harness.js"},"version":"1.0.0"}
