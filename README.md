@@ -34,7 +34,9 @@ Live demo: https://stalwart-shortbread-198c2f.netlify.app
 
 ## Tech
 
-Single self-contained `index.html` — vanilla JavaScript + Tailwind CSS, no build step, no backend, no account. Data lives in the browser's `localStorage` (key `sahayakcare_v1`); a share link carries the profile in the URL hash. Nothing leaves the device except the email you choose to send.
+Single self-contained `index.html` — vanilla JavaScript + Tailwind CSS, no build step. Data lives in the browser's `localStorage` (key `sahayakcare_v1`) by default; a share link carries the profile in the URL hash. Nothing leaves the device except the email you choose to send.
+
+**Optional cloud backend** (`backend/` — FastAPI + SQLite + JWT auth, free Render tier): set `const API_BASE_URL = "https://<your-backend>";` near the top of the script in `index.html` and the app syncs to the cloud when signed in (☁️ Cloud sync button in the header). With no URL set — the default — the app works exactly as before, fully offline. See `backend/README.md` for the API, env vars, and deploy steps.
 
 Built by prompting Gemini, then hand-verified — every feature was traced in the code and tested in the browser (see `test.js`).
 
@@ -45,12 +47,14 @@ Built by prompting Gemini, then hand-verified — every feature was traced in th
 ## Honest notes
 
 - Demo data only — all people, medicines, and appointments are fictional. Not medical advice.
-- Email reminders are drafted through your own mail app (`mailto:` links) because this prototype has no backend; the reminders themselves are computed live from the real schedule.
-- The passcode is a demo gate, not real security — it demonstrates the required passcode-based access pattern.
+- Email reminders are drafted through your own mail app (`mailto:` links) because there is no mail-sending backend; the reminders themselves are computed live from the real schedule. The optional cloud backend stores data only — it never sends email.
+- The passcode is a demo gate, not real security — it demonstrates the required passcode-based access pattern. The optional cloud account (email + password, bcrypt-hashed, JWT) is the real authentication layer; the passcode itself never leaves the device.
+- On Render's free tier the SQLite file resets on redeploy and the service sleeps after ~15 idle minutes — the frontend treats a sleeping backend as offline and keeps working on localStorage, so the demo never breaks.
 
 ## Files
 
 - `index.html` — the whole app (markup, styles, logic).
+- `backend/` — optional FastAPI + SQLite + JWT backend (see `backend/README.md`).
 - `test.js` — smoke tests (run with `node test.js`).
 - `README.md` — this file.
 - `linkedin-post.txt` — the LinkedIn post text submitted with this project.

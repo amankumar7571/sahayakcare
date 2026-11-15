@@ -1,0 +1,17 @@
+# Render free tier — web service, no paid database, no paid add-ons.
+# The SQLite file lives on the service's ephemeral disk: data survives
+# restarts but resets on redeploy. That is the free-tier trade-off and
+# is fine for this demo — the frontend always keeps a local copy too.
+services:
+  - type: web
+    name: sahayakcare-backend
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOW_ORIGINS
+        value: "*"

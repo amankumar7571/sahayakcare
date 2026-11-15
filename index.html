@@ -75,6 +75,7 @@
                 <div class="flex gap-2">
                     <button id="langToggle" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">हिन्दी</button>
                     <button id="textToggle" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">A+ Large text</button>
+                    <button id="syncBtn" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">☁️ Cloud sync</button>
                     <button id="lockBtn" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">🔒 Lock</button>
                 </div>
             </div>
@@ -367,6 +368,36 @@
 </footer>
 </main>
 </div>
+
+<div id="authModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="card p-6 w-full max-w-md">
+        <h3 class="text-xl font-bold mb-2">☁️ Cloud sync</h3>
+        <p class="text-sm text-slate-600 mb-4">Sign in to save this care profile to the cloud and open it on any device. Everything also stays saved on this device — if the cloud is unreachable, the app keeps working offline.</p>
+        <div id="authStatus" class="text-sm mb-4" style="color:var(--text-light)"></div>
+        <div class="space-y-4">
+            <div>
+                <label for="authName" class="block text-sm font-medium text-slate-700">Name (for new accounts)</label>
+                <input type="text" id="authName" class="w-full border rounded-lg p-2 mt-1">
+            </div>
+            <div>
+                <label for="authEmail" class="block text-sm font-medium text-slate-700">Email</label>
+                <input type="email" id="authEmail" class="w-full border rounded-lg p-2 mt-1">
+            </div>
+            <div>
+                <label for="authPassword" class="block text-sm font-medium text-slate-700">Password</label>
+                <input type="password" id="authPassword" class="w-full border rounded-lg p-2 mt-1">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button id="authSignIn" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-semibold">Sign in</button>
+                <button id="authSignUp" class="flex-1 bg-teal-600 text-white py-2 rounded-lg font-semibold">Create account</button>
+            </div>
+            <div class="flex gap-2">
+                <button id="authSignOut" class="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-semibold">Sign out</button>
+                <button id="authCancel" class="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-semibold">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
 const $ = id => document.getElementById(id);
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -392,6 +423,89 @@ const slotLabel = s => {
     return labels[s] || s;
 };
 const SLOT_HOURS = { morning: 8, afternoon: 13, evening: 18, night: 21 };
+
+// ---- Cloud sync (optional) ---------------------------------------------
+// Set API_BASE_URL to the deployed SahayakCare backend to enable cloud
+// sync, e.g. "https://sahayakcare-backend.onrender.com".
+// Empty string = local-only mode: everything stays in localStorage.
+// When a URL is set AND the backend answers AND the user is signed in
+// (JWT in localStorage), changes are also saved to the server and the
+// server copy is loaded at unlock. In every other case — no URL,
+// backend asleep/unreachable, or not signed in — the app silently keeps
+// working exactly as before, on localStorage only. The demo passcode
+// lock is unchanged, and the passcode itself is never sent to the server.
+const API_BASE_URL = "";
+
+const api = {
+    tokenKey: 'sahayakcare_token',
+    get token() { try { return localStorage.getItem(this.tokenKey) || ''; } catch (e) { return ''; } },
+    set token(v) { try { v ? localStorage.setItem(this.tokenKey, v) : localStorage.removeItem(this.tokenKey); } catch (e) {} },
+    get enabled() { return API_BASE_URL !== ''; },
+    get signedIn() { return this.enabled && !!this.token; },
+    base() { return API_BASE_URL.replace(/\/+$/, ''); },
+    // Data call: parsed JSON on success, null on ANY failure (network
+    // error, sleeping backend, bad status). Callers treat null as
+    // "stay local" — sync never shows an error to the user.
+    async call(path, options) {
+        if (!this.enabled) return null;
+        try {
+            const res = await fetch(this.base() + path, {
+                ...(options || {}),
+                headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}), ...((options && options.headers) || {}) }
+            });
+            if (!res.ok) return null;
+            return await res.json().catch(() => ({}));
+        } catch (e) { return null; }
+    },
+    // Auth call: { status, data } on a real HTTP answer, null when the
+    // backend cannot be reached at all, so sign-in can tell a wrong
+    // password (401) apart from a sleeping backend (null).
+    async authJson(path, body) {
+        if (!this.enabled) return null;
+        try {
+            const res = await fetch(this.base() + path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            return { status: res.status, data: await res.json().catch(() => ({})) };
+        } catch (e) { return null; }
+    },
+    async signUp(name, email, password) {
+        return this.authJson('/api/auth/register', { name, email, password });
+    },
+    async signIn(email, password) {
+        if (!this.enabled) return null;
+        try {
+            const params = new URLSearchParams();
+            params.append('username', email);
+            params.append('password', password);
+            const res = await fetch(this.base() + '/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            });
+            return { status: res.status, data: await res.json().catch(() => ({})) };
+        } catch (e) { return null; }
+    },
+    // Best-effort upload of the whole state (fire-and-forget).
+    async syncPush() {
+        if (!this.signedIn) return;
+        const { medicines, appointments, circle, vitals, doseLog } = state;
+        await this.call('/api/state', { method: 'PUT', body: JSON.stringify({ medicines, appointments, circle, vitals, doseLog }) });
+    },
+    // Download the server copy (returns true if it replaced local state).
+    // No saved state on the server (404) or any failure = keep local data.
+    async syncPull() {
+        if (!this.signedIn) return false;
+        const data = await this.call('/api/state');
+        if (!data || !Array.isArray(data.medicines)) return false;
+        const passcode = state.passcode;
+        state = { medicines: data.medicines, appointments: data.appointments || [], circle: data.circle || [], vitals: data.vitals || [], doseLog: data.doseLog || {}, passcode };
+        localStorage.setItem('sahayakcare_v1', JSON.stringify(state)); // direct write: save() would push it straight back
+        return true;
+    }
+};
 
 const I18N = {
     en: {
@@ -439,6 +553,7 @@ let dismissedReminders = new Set();
 
 function save() {
     localStorage.setItem('sahayakcare_v1', JSON.stringify(state));
+    api.syncPush(); // fire-and-forget: silent if offline / not signed in
 }
 
 function seedData() {
@@ -949,6 +1064,7 @@ $('unlockBtn').onclick = () => {
         $('lockScreen').style.display = 'none';
         $('app').style.display = 'block';
         renderAll();
+        if (api.signedIn) api.syncPull().then(pulled => { if (pulled) renderAll(); });
     } else {
         $('lockError').style.display = 'block';
     }
@@ -1106,12 +1222,64 @@ $('vitalAdd').onclick = () => {
     renderAll();
 };
 
-[medModal, apptModal, memberModal].forEach(m => {
+function refreshAuthUI() {
+    const signedIn = api.signedIn;
+    $('authSignOut').style.display = signedIn ? '' : 'none';
+    $('authStatus').textContent = !api.enabled
+        ? 'Cloud sync is not set up on this demo (no backend URL configured).'
+        : signedIn
+            ? 'Signed in — changes sync to the cloud when the backend is reachable.'
+            : 'Not signed in — the app works fully offline on this device.';
+    $('syncBtn').textContent = signedIn ? '☁️ Synced' : '☁️ Cloud sync';
+}
+
+$('syncBtn').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
+$('authCancel').onclick = () => $('authModal').style.display = 'none';
+$('authSignOut').onclick = () => {
+    api.token = '';
+    refreshAuthUI();
+    $('authModal').style.display = 'none';
+};
+$('authSignIn').onclick = async () => {
+    const email = $('authEmail').value.trim();
+    const password = $('authPassword').value;
+    if (!email || !password) { $('authStatus').textContent = 'Enter your email and password.'; return; }
+    $('authStatus').textContent = 'Signing in…';
+    const res = await api.signIn(email, password);
+    if (res === null) { $('authStatus').textContent = 'Could not reach the cloud right now — the app keeps working offline.'; return; }
+    if (res.status !== 200 || !res.data.access_token) { $('authStatus').textContent = 'Wrong email or password.'; return; }
+    api.token = res.data.access_token;
+    await api.syncPull();
+    refreshAuthUI();
+    $('authModal').style.display = 'none';
+    renderAll();
+};
+$('authSignUp').onclick = async () => {
+    const name = $('authName').value.trim();
+    const email = $('authEmail').value.trim();
+    const password = $('authPassword').value;
+    if (!name || !email || !password) { $('authStatus').textContent = 'Enter a name, email and password to create an account.'; return; }
+    $('authStatus').textContent = 'Creating account…';
+    const res = await api.signUp(name, email, password);
+    if (res === null) { $('authStatus').textContent = 'Could not reach the cloud right now — the app keeps working offline.'; return; }
+    if (res.status === 400) { $('authStatus').textContent = 'That email is already registered — try signing in.'; return; }
+    if (res.status !== 201) { $('authStatus').textContent = 'Could not create the account. Please try again.'; return; }
+    const login = await api.signIn(email, password);
+    if (login && login.status === 200 && login.data.access_token) {
+        api.token = login.data.access_token;
+        await api.syncPush(); // first save: upload the local data to the new account
+    }
+    refreshAuthUI();
+    $('authModal').style.display = 'none';
+    renderAll();
+};
+
+[medModal, apptModal, memberModal, authModal].forEach(m => {
     m.onclick = (e) => { if (e.target === m) m.style.display = 'none'; };
 });
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { ['medModal', 'apptModal', 'memberModal'].forEach(id => $(id).style.display = 'none'); }
+    if (e.key === 'Escape') { ['medModal', 'apptModal', 'memberModal', 'authModal'].forEach(id => $(id).style.display = 'none'); }
 });
 
 $('medCancel').onclick = () => $('medModal').style.display = 'none';
@@ -1125,6 +1293,7 @@ $('changePassBtn').onclick = changePasscode;
 
 document.addEventListener('DOMContentLoaded', () => {
     load();
+    refreshAuthUI();
     $('todayDate').textContent = fmtDate(todayStr());
 });
 </script></body></html>
