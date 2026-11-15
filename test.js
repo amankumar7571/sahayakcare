@@ -124,5 +124,45 @@ check('empty adherence shows "No doses yet"', /No doses yet — add a medicine t
 check('--text-light is the darker #475569', /--text-light:#475569/.test(html));
 check('no text-[10px] disclaimer remains', !/text-\[10px\]/.test(html));
 
+// 11. Fix round 2 (browser QA, 15 Nov): passcode modal, share modal,
+//     future-slot disabling, dose-row spacing, weight unit, reminders
+// 11a. Bug 1 — no native prompt() anywhere; passcode change is an in-app
+//      modal that verifies the old passcode first
+check('no native prompt() calls remain in the script', !/\bprompt\(/.test(script));
+check('changePasscode function is gone', !/function changePasscode/.test(script));
+check('passcode modal exists', htmlIds.has('passModal'));
+for (const id of ['passOld', 'passNew', 'passConfirm', 'passError', 'passSuccess', 'passSave', 'passCancel']) {
+  check(`passcode modal field #${id} exists`, htmlIds.has(id));
+}
+check('pass save verifies the old passcode first', /oldPass !== state\.passcode/.test(script));
+check('pass save validates the new passcode is 4 digits', /!\/\^\\d\{4\}\$\/\.test\(next\)/.test(script));
+check('pass save checks the confirmation matches', /next !== confirmPass/.test(script));
+check('pass modal is wired to the change-passcode button', /\$\('changePassBtn'\)\.onclick = openPassModal/.test(script));
+// 11b. Bug 2 — share shows the link visibly in-app, never via alert/prompt
+check('share modal exists', htmlIds.has('shareModal'));
+for (const id of ['shareLinkInput', 'shareCopyBtn', 'shareCopiedMsg', 'shareCloseBtn']) {
+  check(`share modal element #${id} exists`, htmlIds.has(id));
+}
+check('shareProfile fills the visible link input', /\$\('shareLinkInput'\)\.value = url/.test(script));
+check('shareProfile opens the share modal', /\$\('shareModal'\)\.style\.display = 'flex'/.test(script));
+check('share copy button has a clipboard fallback (select)', /shareCopyBtn[\s\S]*?\.select\(\)/.test(script));
+// 11c. Bug 3 — future slots cannot be marked early
+check('future slots are computed from the slot hour vs now', /future = SLOT_HOURS\[slot\] > new Date\(\)\.getHours\(\)/.test(script));
+check('Taken button is disabled for future slots', /takenDis = status === 'taken' \|\| future/.test(script));
+check('Missed button is disabled for future slots', /missedDis = status === 'missed' \|\| future/.test(script));
+// 11d. Bug 4 — dose row keeps a space between name and dose
+check('dose row uses a non-breaking space between name and dose', /escapeHtml\(m\.name\)\}&nbsp;<span/.test(script));
+// 11e. Bug 5 — Weight shows kg (display only)
+check('weight display helper exists', /vitalDisplay/.test(script));
+check('bare-number Weight displays with kg', /\+ ' kg'/.test(script));
+// 11f. Bug 6 — reminders: Overdue label, missed stays visible, dismiss records
+check('overdue pending dose is labelled Overdue, not Missed', /text: `Overdue: /.test(script));
+check('explicitly missed dose still appears as Missed', /else if \(status === 'missed'\)[\s\S]*?text: `Missed: /.test(script));
+check('dismissing a miss-* reminder records it in doseLog', /doseLog\[key\] = 'missed'/.test(script));
+// 11g. Bug 7 — every delete/reset path confirms first (verified, not changed)
+for (const [fn, msg] of [['deleteMed', 'Remove this medicine?'], ['deleteAppt', 'Delete this appointment?'], ['deleteMember', 'Remove this member from the care circle?'], ['resetDemo', 'Reset all data?']]) {
+  check(`${fn} confirms before deleting`, new RegExp(`function ${fn}[\\s\\S]*?confirm\\("${msg.replace('?', '\\?')}`).test(script));
+}
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);
