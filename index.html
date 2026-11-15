@@ -42,6 +42,13 @@
         <h1 class="text-2xl font-bold text-[#0F766E]">SahayakCare</h1>
         <p class="text-slate-600 mb-6">Elderly Care & Medication Management</p>
         <div class="space-y-4">
+            <button id="lockAuthBtn" data-i18n="lock_signin" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Sign in / Create account</button>
+            <p id="lockAuthState" class="hidden text-sm text-slate-600"><span id="lockAuthEmail"></span> · <button id="lockSignOutBtn" type="button" class="text-teal-700 underline">Sign out</button></p>
+            <div class="flex items-center gap-3 text-xs text-slate-600">
+                <div class="flex-1 border-t border-slate-200"></div>
+                <span data-i18n="lock_or_passcode">or unlock with your passcode</span>
+                <div class="flex-1 border-t border-slate-200"></div>
+            </div>
             <p class="text-sm font-medium" data-i18n="lock_protected">This care profile is protected by a passcode.</p>
             <div class="flex gap-2">
                 <input type="password" id="passInput" maxlength="4" inputmode="numeric" placeholder="Enter 4-digit passcode" class="text-center text-2xl tracking-widest">
@@ -49,11 +56,41 @@
             </div>
             <button id="unlockBtn" data-i18n="lock_unlock" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Unlock Profile</button>
             <p id="lockError" class="text-red-600 hidden" data-i18n="lock_wrong">Wrong passcode, please try again.</p>
-            <p class="text-xs text-slate-600" data-i18n="lock_hint">Demo passcode: 1234</p>
+            <p id="sampleNote" class="hidden text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">Sample profile loaded — unlock with passcode 1234.</p>
+            <button id="sampleProfileBtn" type="button" class="text-sm text-teal-700 underline" data-i18n="lock_sample">Explore a sample profile</button>
         </div>
-        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider">
-            Demo data — fictional people, not medical advice.
+        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
+    </div>
+</div>
+
+<div id="setupScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+    <div class="card p-8 max-w-sm w-full text-center">
+        <div class="text-6xl mb-4">❤️</div>
+        <h1 class="text-2xl font-bold text-[#0F766E]">SahayakCare</h1>
+        <p class="text-slate-600 mb-6">Elderly Care & Medication Management</p>
+        <div class="space-y-4 text-left">
+            <h2 class="text-lg font-bold text-center" data-i18n="setup_title">Create your care profile</h2>
+            <div>
+                <label for="setupName" class="block text-sm font-medium text-slate-700" data-i18n="setup_name">Elderly person's name</label>
+                <input type="text" id="setupName" class="w-full border rounded-lg p-2 mt-1">
+            </div>
+            <div>
+                <label for="setupAge" class="block text-sm font-medium text-slate-700" data-i18n="setup_age">Age (optional)</label>
+                <input type="number" id="setupAge" min="1" max="130" class="w-full border rounded-lg p-2 mt-1">
+            </div>
+            <div>
+                <label for="setupPass" class="block text-sm font-medium text-slate-700" data-i18n="setup_pass">Set a 4-digit passcode</label>
+                <input type="password" id="setupPass" maxlength="4" inputmode="numeric" class="w-full border rounded-lg p-2 mt-1 text-center text-2xl tracking-widest">
+            </div>
+            <div>
+                <label for="setupPassConfirm" class="block text-sm font-medium text-slate-700" data-i18n="setup_pass_confirm">Confirm passcode</label>
+                <input type="password" id="setupPassConfirm" maxlength="4" inputmode="numeric" class="w-full border rounded-lg p-2 mt-1 text-center text-2xl tracking-widest">
+            </div>
+            <p id="setupError" class="text-red-600 hidden text-sm text-center"></p>
+            <button id="setupSubmit" data-i18n="setup_submit" class="bg-[#0F766E] text-white w-full py-3 rounded-xl font-bold text-lg hover:bg-[#0d635d] transition-colors">Create profile</button>
+            <p class="text-center text-sm"><button id="setupSignInLink" type="button" class="text-teal-700 underline" data-i18n="setup_signin">Already have an account? Sign in</button></p>
         </div>
+        <div class="mt-8 pt-6 border-t border-slate-100 text-[10px] text-slate-600 uppercase tracking-wider" data-i18n="footer_advice">SahayakCare does not replace medical advice.</div>
     </div>
 </div>
 
@@ -69,8 +106,8 @@
             </div>
             <div class="flex items-center gap-3">
                 <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full">
-                    <div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center font-bold text-sm">SD</div>
-                    <span class="text-sm font-medium hidden sm:inline">Shanti Devi, 74 yrs</span>
+                    <div id="profileAvatar" class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center font-bold text-sm">?</div>
+                    <span id="profileChip" class="text-sm font-medium hidden sm:inline">Care profile</span>
                 </div>
                 <div class="flex gap-2">
                     <button id="langToggle" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition-colors">हिन्दी</button>
@@ -81,6 +118,8 @@
             </div>
         </div>
     </header>
+
+    <div id="sampleBanner" class="hidden bg-amber-50 border-b border-amber-200 text-amber-800 text-sm text-center px-4 py-2" data-i18n="sample_banner">You're exploring a sample profile with fictional data.</div>
 
     <nav class="sticky top-0 bg-white border-b border-slate-200 z-40 overflow-x-auto">
         <div class="max-w-5xl mx-auto flex whitespace-nowrap">
@@ -97,7 +136,7 @@
         <section id="view-dashboard" class="view active space-y-6">
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-2">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800" data-i18n="dash_title">Good day, Shanti Devi 🙏</h2>
+                    <h2 id="dashTitle" class="text-2xl font-bold text-slate-800">Good day 🙏</h2>
                     <p id="todayDate" class="text-slate-600"></p>
                 </div>
             </div>
@@ -284,7 +323,7 @@
 </div><section id="view-circle" class="view hidden">
     <h2 data-i18n="circle_title" class="text-2xl font-bold mb-4">👨‍👩‍👧 Care Circle</h2>
     <p class="mb-4 text-slate-600">Family and caretakers who share this care profile. Everyone here can view medicines and appointments.</p>
-    <p class="mb-4 text-slate-600">Profile owner: <strong>Shanti Devi</strong> — new members join only after her approval.</p>
+    <p class="mb-4 text-slate-600">Profile owner: <strong id="circleOwner">—</strong> — new members join only after the owner's approval.</p>
     <button id="addMemberBtn" data-i18n="add_member" class="bg-teal-600 text-white px-4 py-2 rounded-lg mb-6 hover:bg-teal-700 transition-colors">+ Add member</button>
     <div id="circleList" class="space-y-4"></div>
 
@@ -359,11 +398,11 @@
 </section>
 
 <footer class="text-center text-sm text-slate-600 mt-8 pb-12">
-    <p>SahayakCare — demo prototype built for Catalyst Solo AI Hackathon by Aman Kumar. Demo data with fictional people — not medical advice.</p>
+    <p data-i18n="footer_advice">SahayakCare does not replace medical advice.</p>
     <div class="flex gap-2 justify-center mt-4 flex-wrap">
         <button id="shareBtn" class="btn btn-secondary" data-i18n="share_btn">🔗 Share care profile</button>
         <button id="changePassBtn" class="btn btn-secondary" data-i18n="change_pass_btn">🔑 Change passcode</button>
-        <button id="resetDemo" class="btn btn-secondary">Reset demo data</button>
+        <button id="resetDemo" class="btn btn-secondary">Reset all data</button>
     </div>
 </footer>
 </main>
@@ -432,8 +471,8 @@ const SLOT_HOURS = { morning: 8, afternoon: 13, evening: 18, night: 21 };
 // (JWT in localStorage), changes are also saved to the server and the
 // server copy is loaded at unlock. In every other case — no URL,
 // backend asleep/unreachable, or not signed in — the app silently keeps
-// working exactly as before, on localStorage only. The demo passcode
-// lock is unchanged, and the passcode itself is never sent to the server.
+// working exactly as before, on localStorage only. The passcode lock
+// is unchanged, and the passcode itself is never sent to the server.
 const API_BASE_URL = "https://sahayakcare.onrender.com";
 
 const api = {
@@ -442,6 +481,16 @@ const api = {
     set token(v) { try { v ? localStorage.setItem(this.tokenKey, v) : localStorage.removeItem(this.tokenKey); } catch (e) {} },
     get enabled() { return API_BASE_URL !== ''; },
     get signedIn() { return this.enabled && !!this.token; },
+    // Display-only decode of the JWT payload's email (sub claim), so the
+    // lock screen can show who is signed in. No verification here — the
+    // server enforces auth; this only labels the UI.
+    emailFromToken() {
+        try {
+            if (!this.token) return '';
+            const payload = JSON.parse(atob(this.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+            return payload.sub || '';
+        } catch (e) { return ''; }
+    },
     base() { return API_BASE_URL.replace(/\/+$/, ''); },
     // Data call: parsed JSON on success, null on ANY failure (network
     // error, sleeping backend, bad status). Callers treat null as
@@ -500,8 +549,10 @@ const api = {
         if (!this.signedIn) return false;
         const data = await this.call('/api/state');
         if (!data || !Array.isArray(data.medicines)) return false;
-        const passcode = state.passcode;
-        state = { medicines: data.medicines, appointments: data.appointments || [], circle: data.circle || [], vitals: data.vitals || [], doseLog: data.doseLog || {}, passcode };
+        // The cloud holds the care data; the profile identity (name, age,
+        // passcode, sample flag) stays local to this device and is preserved.
+        const { passcode, profileName, profileAge, sample } = state;
+        state = { profileName, profileAge, medicines: data.medicines, appointments: data.appointments || [], circle: data.circle || [], vitals: data.vitals || [], doseLog: data.doseLog || {}, passcode, sample };
         localStorage.setItem('sahayakcare_v1', JSON.stringify(state)); // direct write: save() would push it straight back
         return true;
     }
@@ -511,13 +562,25 @@ const I18N = {
     en: {
         nav_dashboard: "🏠 Dashboard", nav_medicines: "💊 Medicines", nav_appointments: "📅 Appointments",
         nav_circle: "👨‍👩‍👧 Care Circle", nav_vitals: "🩺 Vitals", nav_reminders: "🔔 Reminders",
-        dash_title: "Good day, Shanti Devi 🙏", adh_title: "Medication adherence — last 7 days",
+        adh_title: "Medication adherence — last 7 days",
         today_title: "Today's medicines", next_title: "Next appointment", rem_title: "Needs attention",
         meds_title: "💊 Medicines", appts_title: "📅 Doctor appointments", circle_title: "👨‍👩‍👧 Care Circle",
         vitals_title: "🩺 Health vitals", reminders_title: "🔔 Reminders",
         lock_protected: "This care profile is protected by a passcode.",
-        lock_hint: "Demo passcode: 1234", lock_unlock: "Unlock Profile",
+        lock_unlock: "Unlock Profile",
         lock_wrong: "Wrong passcode, please try again.", lock_placeholder: "Enter 4-digit passcode",
+        lock_signin: "Sign in / Create account",
+        lock_or_passcode: "or unlock with your passcode",
+        lock_sample: "Explore a sample profile",
+        setup_title: "Create your care profile",
+        setup_name: "Elderly person's name",
+        setup_age: "Age (optional)",
+        setup_pass: "Set a 4-digit passcode",
+        setup_pass_confirm: "Confirm passcode",
+        setup_submit: "Create profile",
+        setup_signin: "Already have an account? Sign in",
+        footer_advice: "SahayakCare does not replace medical advice.",
+        sample_banner: "You're exploring a sample profile with fictional data.",
         add_med: "+ Add medicine", add_appt: "+ Add appointment", add_member: "+ Add member",
         stat_meds: "Medicines today", stat_appts: "Upcoming appointments", stat_streak: "Day adherence streak",
         taken: "Taken", missed: "Missed", pending: "Pending",
@@ -529,13 +592,25 @@ const I18N = {
     hi: {
         nav_dashboard: "🏠 डैशबोर्ड", nav_medicines: "💊 दवाइयाँ", nav_appointments: "📅 अपॉइंटमेंट",
         nav_circle: "👨‍👩‍👧 देखभाल समूह", nav_vitals: "🩺 स्वास्थ्य", nav_reminders: "🔔 अनुस्मारक",
-        dash_title: "नमस्ते, शांति देवी 🙏", adh_title: "दवा पालन — पिछले 7 दिन",
+        adh_title: "दवा पालन — पिछले 7 दिन",
         today_title: "आज की दवाइयाँ", next_title: "अगला अपॉइंटमेंट", rem_title: "ध्यान देने योग्य",
         meds_title: "💊 दवाइयाँ", appts_title: "📅 डॉक्टर अपॉइंटमेंट", circle_title: "👨‍👩‍👧 देखभाल समूह",
         vitals_title: "🩺 स्वास्थ्य", reminders_title: "🔔 अनुस्मारक",
         lock_protected: "यह देखभाल प्रोफ़ाइल पासकोड से सुरक्षित है।",
-        lock_hint: "डेमो पासकोड: 1234", lock_unlock: "प्रोफ़ाइल खोलें",
+        lock_unlock: "प्रोफ़ाइल खोलें",
         lock_wrong: "गलत पासकोड, कृपया फिर से कोशिश करें।", lock_placeholder: "4 अंकों का पासकोड डालें",
+        lock_signin: "साइन इन करें / खाता बनाएँ",
+        lock_or_passcode: "या अपने पासकोड से खोलें",
+        lock_sample: "नमूना प्रोफ़ाइल देखें",
+        setup_title: "अपनी देखभाल प्रोफ़ाइल बनाएँ",
+        setup_name: "बुज़ुर्ग का नाम",
+        setup_age: "उम्र (वैकल्पिक)",
+        setup_pass: "4 अंकों का पासकोड सेट करें",
+        setup_pass_confirm: "पासकोड दोबारा डालें",
+        setup_submit: "प्रोफ़ाइल बनाएँ",
+        setup_signin: "पहले से खाता है? साइन इन करें",
+        footer_advice: "SahayakCare चिकित्सा सलाह का विकल्प नहीं है।",
+        sample_banner: "आप नमूना प्रोफ़ाइल देख रहे हैं — यह डेटा काल्पनिक है।",
         add_med: "+ दवा जोड़ें", add_appt: "+ अपॉइंटमेंट जोड़ें", add_member: "+ सदस्य जोड़ें",
         stat_meds: "आज की दवाइयाँ", stat_appts: "आगामी अपॉइंटमेंट", stat_streak: "पालन की लकीर (दिन)",
         taken: "ली गई", missed: "छूटी", pending: "बाकी",
@@ -547,7 +622,7 @@ const I18N = {
 };
 
 const t = k => (I18N[currentLang] && I18N[currentLang][k]) || I18N.en[k] || k;
-let state = { medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: '1234' };
+let state = { profileName: '', profileAge: null, medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: '', sample: false };
 let currentLang = 'en';
 let dismissedReminders = new Set();
 
@@ -556,7 +631,10 @@ function save() {
     api.syncPush(); // fire-and-forget: silent if offline / not signed in
 }
 
-function seedData() {
+function sampleData() {
+    state.profileName = 'Shanti Devi';
+    state.profileAge = 74;
+    state.sample = true;
     state.passcode = '1234';
     state.medicines = [
         { id: 'm1', name: 'Metformin', dose: '500 mg', times: ['morning', 'night'], purpose: 'Diabetes', stock: 18, notes: 'Take with food' },
@@ -603,6 +681,8 @@ function load() {
             const shared = JSON.parse(decodeURIComponent(escape(atob(hash.slice(3)))));
             if (shared && Array.isArray(shared.medicines)) {
                 state = shared;
+                if (!state.profileName) state.profileName = 'Shared profile';
+                if (typeof state.passcode !== 'string') state.passcode = '';
                 save();
                 history.replaceState(null, '', location.pathname);
                 return;
@@ -613,13 +693,17 @@ function load() {
         const data = localStorage.getItem('sahayakcare_v1');
         if (data) { state = JSON.parse(data); return; }
     } catch (e) { localStorage.removeItem('sahayakcare_v1'); }
-    seedData();
+    // No saved profile: keep the empty default state. The setup screen
+    // collects the profile name and passcode — no demo data is seeded.
 }
 
 function resetDemo() {
-    if (confirm("Reset all data to demo state?")) {
+    if (confirm("Reset all data? This clears the care profile on this device.")) {
         localStorage.removeItem('sahayakcare_v1');
-        load();
+        api.token = '';
+        state = { profileName: '', profileAge: null, medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: '', sample: false };
+        showBootScreen();
+        refreshAuthUI();
         renderAll();
     }
 }
@@ -744,14 +828,14 @@ function buildReminders() {
                     id: `miss-${m.id}-${slot}`,
                     icon: '💊',
                     text: `Missed: ${escapeHtml(m.name)} ${escapeHtml(m.dose)} (${slotLabel(slot)})`,
-                    mailto: mailLink('SahayakCare reminder: missed dose', `Shanti Devi missed her ${m.name} (${slot}) dose. Please check in.`)
+                    mailto: mailLink('SahayakCare reminder: missed dose', `${profileName()} missed their ${m.name} (${slot}) dose. Please check in.`)
                 });
             } else if (!status && slotHr - hr <= 2 && slotHr - hr > 0) {
                 list.push({
                     id: `due-${m.id}-${slot}`,
                     icon: '⏰',
                     text: `Due soon: ${escapeHtml(m.name)} ${escapeHtml(m.dose)} (${slotLabel(slot)})`,
-                    mailto: mailLink('SahayakCare: dose due soon', `Shanti Devi has a dose of ${m.name} due at ${slotLabel(slot)}.`)
+                    mailto: mailLink('SahayakCare: dose due soon', `${profileName()} has a dose of ${m.name} due at ${slotLabel(slot)}.`)
                 });
             }
         });
@@ -1045,12 +1129,25 @@ function shareProfile() {
 }
 
 function changePasscode() {
-    const next = prompt('Enter a new 4-digit passcode:', state.passcode || '1234');
+    const next = prompt('Enter a new 4-digit passcode:', '');
     if (next && /^\d{4}$/.test(next)) { state.passcode = next; save(); alert('Passcode changed.'); }
     else if (next) alert('Passcode must be exactly 4 digits.');
 }
 
+function profileName() { return state.profileName || 'Care profile'; }
+
+function renderProfileNames() {
+    const name = profileName();
+    const initials = name.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
+    $('profileAvatar').textContent = initials;
+    $('profileChip').textContent = state.profileAge ? name + ', ' + state.profileAge + ' yrs' : name;
+    $('dashTitle').textContent = (currentLang === 'hi' ? 'नमस्ते, ' : 'Good day, ') + name + ' 🙏';
+    $('circleOwner').textContent = name;
+    $('sampleBanner').style.display = state.sample ? 'block' : 'none';
+}
+
 function renderAll() {
+    renderProfileNames();
     renderDashboard();
     renderMeds();
     renderAppts();
@@ -1060,8 +1157,9 @@ function renderAll() {
 }
 
 $('unlockBtn').onclick = () => {
-    if ($('passInput').value === (state.passcode || "1234")) {
+    if (state.passcode && $('passInput').value === state.passcode) {
         $('lockScreen').style.display = 'none';
+        $('setupScreen').style.display = 'none';
         $('app').style.display = 'block';
         renderAll();
         if (api.signedIn) api.syncPull().then(pulled => { if (pulled) renderAll(); });
@@ -1079,11 +1177,56 @@ $('showPassBtn').onclick = () => {
     $('showPassBtn').textContent = show ? 'Hide' : 'Show';
 };
 
-$('lockBtn').onclick = () => {
+$('lockBtn').onclick = () => { showBootScreen(); };
+
+// ---- Boot screens: setup (first run) vs lock (returning profile) ----
+function showBootScreen() {
+    const hasProfile = !!(state.passcode && state.profileName);
+    $('setupScreen').style.display = hasProfile ? 'none' : 'flex';
+    $('lockScreen').style.display = hasProfile ? 'flex' : 'none';
     $('app').style.display = 'none';
-    $('lockScreen').style.display = 'flex';
     $('passInput').value = '';
     $('lockError').style.display = 'none';
+    $('sampleNote').style.display = 'none';
+    refreshAuthUI();
+}
+
+// Signed-in state shown on the lock screen itself.
+function refreshLockAuthUI() {
+    const email = api.emailFromToken();
+    $('lockAuthState').style.display = email ? 'block' : 'none';
+    $('lockAuthBtn').style.display = email ? 'none' : 'block';
+    if (email) $('lockAuthEmail').textContent = 'Signed in as ' + email;
+}
+
+$('lockAuthBtn').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
+$('lockSignOutBtn').onclick = () => { api.token = ''; refreshAuthUI(); };
+$('sampleProfileBtn').onclick = () => {
+    // Sample data is local-only: sign out first so fictional data never
+    // overwrites the signed-in user's real cloud profile.
+    api.token = '';
+    sampleData();
+    showBootScreen();
+    $('sampleNote').style.display = 'block';
+};
+$('setupSignInLink').onclick = () => { refreshAuthUI(); $('authModal').style.display = 'flex'; };
+$('setupSubmit').onclick = () => {
+    const name = $('setupName').value.trim();
+    const age = $('setupAge').value.trim();
+    const pass = $('setupPass').value;
+    const confirmPass = $('setupPassConfirm').value;
+    const err = $('setupError');
+    const fail = msg => { err.textContent = msg; err.style.display = 'block'; };
+    if (!name) return fail('Enter the name of the person this profile is for.');
+    if (!/^\d{4}$/.test(pass)) return fail('Passcode must be exactly 4 digits.');
+    if (pass !== confirmPass) return fail('Passcodes do not match.');
+    state = { profileName: name, profileAge: age ? parseInt(age, 10) : null, medicines: [], appointments: [], circle: [], vitals: [], doseLog: {}, passcode: pass, sample: false };
+    save();
+    err.style.display = 'none';
+    $('setupScreen').style.display = 'none';
+    $('lockScreen').style.display = 'none';
+    $('app').style.display = 'block';
+    renderAll();
 };
 
 document.querySelectorAll('.tabbtn').forEach(btn => {
@@ -1223,10 +1366,11 @@ $('vitalAdd').onclick = () => {
 };
 
 function refreshAuthUI() {
+    refreshLockAuthUI();
     const signedIn = api.signedIn;
     $('authSignOut').style.display = signedIn ? '' : 'none';
     $('authStatus').textContent = !api.enabled
-        ? 'Cloud sync is not set up on this demo (no backend URL configured).'
+        ? 'Cloud sync is not set up (no backend URL configured).'
         : signedIn
             ? 'Signed in — changes sync to the cloud when the backend is reachable.'
             : 'Not signed in — the app works fully offline on this device.';
@@ -1251,6 +1395,7 @@ $('authSignIn').onclick = async () => {
     api.token = res.data.access_token;
     await api.syncPull();
     refreshAuthUI();
+    if ($('app').style.display !== 'block') showBootScreen();
     $('authModal').style.display = 'none';
     renderAll();
 };
@@ -1270,6 +1415,7 @@ $('authSignUp').onclick = async () => {
         await api.syncPush(); // first save: upload the local data to the new account
     }
     refreshAuthUI();
+    if ($('app').style.display !== 'block') showBootScreen();
     $('authModal').style.display = 'none';
     renderAll();
 };
@@ -1293,7 +1439,7 @@ $('changePassBtn').onclick = changePasscode;
 
 document.addEventListener('DOMContentLoaded', () => {
     load();
-    refreshAuthUI();
+    showBootScreen();
     $('todayDate').textContent = fmtDate(todayStr());
 });
 </script></body></html>

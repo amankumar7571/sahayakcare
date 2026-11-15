@@ -69,5 +69,23 @@ for (const k of new Set(i18nKeys)) {
   check(`i18n key "${k}" in en`, new RegExp(`${k}:\\s*"`).test(script));
 }
 
+// 8. Real app, not a demo: no hardcoded passcode, no seeded data on boot,
+//    no demo labels; setup screen + lock-screen sign-in + sample link exist
+const stateLine = (script.match(/let state = \{[^;]*\};/) || [])[0] || '';
+check('initial state has an empty passcode', /passcode: ''/.test(stateLine));
+check('initial state starts empty (no seeded medicines)', /medicines: \[\]/.test(stateLine));
+check('unlock never falls back to a hardcoded passcode', !/\|\| ['"]1234['"]/.test(script));
+check('quoted "1234" appears exactly once in the script (the sample profile passcode)', (script.match(/'1234'/g) || []).length === 1);
+check('load() never seeds demo data', !/seedData/.test(script));
+check('sampleData is called from exactly one place (the sample link)', (script.match(/sampleData\(\)/g) || []).length === 2);
+check('no "Demo passcode" text anywhere', !/Demo passcode/i.test(html));
+check('no "DEMO DATA" footer', !/DEMO DATA/.test(html));
+check('medical-advice footer present', /does not replace medical advice/.test(html));
+check('setup screen exists and is hidden by default', /id="setupScreen" class="hidden/.test(html));
+check('lock-screen sign-in button exists', htmlIds.has('lockAuthBtn'));
+check('sample profile link exists', htmlIds.has('sampleProfileBtn'));
+check('sample banner exists', htmlIds.has('sampleBanner'));
+check('empty-state strings present', ['no_meds', 'no_appts', 'no_members', 'no_vitals'].every(k => new RegExp(k + ':\\s*"').test(script)));
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) FAILED.`);
 process.exit(failures === 0 ? 0 : 1);
